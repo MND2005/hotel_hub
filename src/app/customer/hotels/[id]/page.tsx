@@ -21,6 +21,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageGallery } from "@/components/app/image-gallery";
 import Image from "next/image";
+import { HotelCardImage } from "@/components/app/hotel-card-image";
 
 const HotelDetailSkeleton = () => (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -173,9 +174,9 @@ export default function HotelDetailPage() {
                     {rooms.length === 0 ? (
                       <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
                     ) : rooms.map(room => (
-                        <Card key={room.id} className="flex flex-col md:flex-row items-center">
-                            <div className="relative w-full md:w-48 h-48 md:h-full">
-                               <Image src={room.imageUrls?.[0] || 'https://placehold.co/600x400.png'} data-ai-hint={room.aiHint} alt={room.type} fill className="object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none" />
+                        <Card key={room.id} className="flex flex-col md:flex-row items-center overflow-hidden">
+                            <div className="w-full md:w-48 shrink-0">
+                               <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
                             </div>
                             <CardHeader className="flex-1">
                                 <CardTitle>{room.type}</CardTitle>

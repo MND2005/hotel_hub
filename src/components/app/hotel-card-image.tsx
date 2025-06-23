@@ -6,9 +6,10 @@ import { useState, useEffect, useRef } from "react";
 type HotelCardImageProps = {
   imageUrls: string[];
   alt: string;
+  aiHint?: string;
 };
 
-export function HotelCardImage({ imageUrls, alt }: HotelCardImageProps) {
+export function HotelCardImage({ imageUrls, alt, aiHint }: HotelCardImageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -39,7 +40,7 @@ export function HotelCardImage({ imageUrls, alt }: HotelCardImageProps) {
 
   const primaryImage = validImageUrls[currentIndex];
   
-  const dataAiHint = (imageUrls && imageUrls.length > 0) ? 'hotel exterior' : undefined;
+  const dataAiHint = aiHint || ((imageUrls && imageUrls.length > 0) ? 'hotel exterior' : undefined);
 
   return (
     <div

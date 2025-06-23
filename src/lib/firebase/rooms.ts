@@ -19,7 +19,14 @@ export async function getRoomsByHotel(hotelId: string): Promise<Room[]> {
     const roomsCollection = getRoomsCollection(hotelId);
     const q = query(roomsCollection);
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
+    return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+            id: doc.id, 
+            ...data,
+            imageUrls: data.imageUrls || [],
+        } as Room;
+    });
 }
 
 export async function updateRoom(hotelId: string, roomId: string, roomData: Partial<Omit<Room, 'id'>>) {

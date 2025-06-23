@@ -153,7 +153,7 @@ export default function HotelRoomsPage() {
                 <Card key={room.id} className="overflow-hidden flex flex-col">
                   <CardHeader className="p-0">
                     <div className="relative h-48 w-full">
-                       <HotelCardImage imageUrls={room.imageUrls} alt={room.type} />
+                       <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
                       <Badge className="absolute top-2 right-2" variant={room.isAvailable ? 'default' : 'destructive'}>
                         {room.isAvailable ? 'Available' : 'Booked'}
                       </Badge>
