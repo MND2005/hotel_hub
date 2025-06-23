@@ -23,25 +23,33 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getAllHotelsForAdmin } from "@/lib/firebase/hotels";
+import { getAllUsers } from "@/lib/firebase/users";
 
-const hotels: any[] = [];
+export default async function HotelsPage() {
+  const [hotels, users] = await Promise.all([
+    getAllHotelsForAdmin(),
+    getAllUsers(),
+  ]);
 
-export default function HotelsPage() {
+  const userMap = new Map(users.map((user) => [user.id, user.name]));
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Hotel Management</CardTitle>
-        <CardDescription>View and manage all hotels on the platform.</CardDescription>
+        <CardDescription>
+          View and manage all hotels on the platform.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Hotel ID</TableHead>
+              <TableHead>Hotel Name</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead>Address</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Joined Date</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -50,26 +58,33 @@ export default function HotelsPage() {
           <TableBody>
             {hotels.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24">
+                <TableCell colSpan={5} className="text-center h-24">
                   No hotels found.
                 </TableCell>
               </TableRow>
             ) : (
               hotels.map((hotel) => (
                 <TableRow key={hotel.id}>
-                  <TableCell className="font-medium">{hotel.id}</TableCell>
-                  <TableCell>{hotel.owner}</TableCell>
-                  <TableCell>{hotel.address}</TableCell>
+                  <TableCell className="font-medium">{hotel.name}</TableCell>
                   <TableCell>
-                    <Badge variant={hotel.status === 'active' ? 'default' : 'secondary'} className={hotel.status === 'inactive' ? 'bg-destructive/20 text-destructive-foreground' : ''}>
-                      {hotel.status}
+                    {userMap.get(hotel.ownerId) || "Unknown Owner"}
+                  </TableCell>
+                  <TableCell className="truncate max-w-sm">
+                    {hotel.address}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={hotel.isOpen ? "default" : "secondary"}>
+                      {hotel.isOpen ? "Open" : "Closed"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{hotel.joined}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                        <Button
+                          aria-haspopup="true"
+                          size="icon"
+                          variant="ghost"
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Toggle menu</span>
                         </Button>

@@ -97,3 +97,22 @@ export async function getAllHotels(): Promise<Hotel[]> {
     });
     return hotels;
 }
+
+
+export async function getAllHotelsForAdmin(): Promise<Hotel[]> {
+    if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+    }
+
+    const hotels: Hotel[] = [];
+    const querySnapshot = await getDocs(collection(db, "hotels"));
+    querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        hotels.push({ 
+            id: doc.id, 
+            ...data,
+            imageUrls: data.imageUrls || [],
+        } as Hotel);
+    });
+    return hotels;
+}

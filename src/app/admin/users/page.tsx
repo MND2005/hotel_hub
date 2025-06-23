@@ -23,15 +23,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getAllUsers } from "@/lib/firebase/users";
+import { format } from "date-fns";
 
-const users: any[] = [];
+export default async function UsersPage() {
+  const users = await getAllUsers();
 
-export default function UsersPage() {
   return (
     <Card>
       <CardHeader>
         <CardTitle>User Management</CardTitle>
-        <CardDescription>View and manage all users on the platform.</CardDescription>
+        <CardDescription>
+          View and manage all users on the platform.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -57,19 +61,35 @@ export default function UsersPage() {
             ) : (
               users.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.id}</TableCell>
+                  <TableCell className="font-medium truncate max-w-xs">
+                    {user.id}
+                  </TableCell>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'owner' ? 'default' : 'secondary'}>
+                    <Badge
+                      variant={
+                        user.role === "admin"
+                          ? "destructive"
+                          : user.role === "owner"
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
                       {user.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>{user.joined}</TableCell>
+                  <TableCell>
+                    {format(new Date(user.joinedDate), "PPP")}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                        <Button
+                          aria-haspopup="true"
+                          size="icon"
+                          variant="ghost"
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Toggle menu</span>
                         </Button>
