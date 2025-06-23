@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { MapPin } from 'lucide-react';
 import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 type MapProps = {
   center: { lat: number; lng: number };
