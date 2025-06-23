@@ -1,14 +1,31 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Allow users to read and write their own user document
     match /users/{userId} {
-      allow read: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+    
+    // Allow anyone to read hotels, but only owners to create/update/delete their own
     match /hotels/{hotelId} {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+
+      // Rules for rooms subcollection
+      match /rooms/{roomId} {
+        allow read: if true;
+        allow create, update, delete: if request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid;
+      }
+      
+      // Rules for menuItems subcollection
+      match /menuItems/{menuItemId} {
+        allow read: if true;
+        allow create, update, delete: if request.auth != null && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid;
+      }
     }
   }
 }

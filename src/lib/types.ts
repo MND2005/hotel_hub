@@ -26,6 +26,7 @@ export type Room = {
   capacity: number;
   isAvailable: boolean;
   imageUrl: string;
+  aiHint?: string;
 };
 
 export type MenuItem = {

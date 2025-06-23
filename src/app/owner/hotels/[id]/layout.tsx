@@ -10,7 +10,6 @@ import { Hotel, BedDouble, Utensils, ArrowLeft } from "lucide-react";
 
 export default function HotelManagementLayout({
   children,
-  params,
 }: {
   children: ReactNode;
   params: { id: string };
@@ -49,7 +48,7 @@ export default function HotelManagementLayout({
             <CardContent className="p-2">
                 <nav className="grid gap-1">
                     {navLinks.map(link => {
-                       const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href) && pathname !== `/owner/hotels/${hotelId}`;
+                       const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
                        return (
                          <Link key={link.href} href={link.href}>
                              <Button variant={isActive ? "secondary" : "ghost"} className="w-full justify-start">
@@ -63,7 +62,7 @@ export default function HotelManagementLayout({
             </CardContent>
           </Card>
         </div>
-        <div className="md-col-span-3">
+        <div className="md:col-span-3">
             {children}
         </div>
       </div>
