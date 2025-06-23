@@ -21,11 +21,14 @@ export async function signUp(
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const user = userCredential.user;
 
+  // Assign 'admin' role if the email is the designated admin email
+  const userRole = email.toLowerCase() === 'admin@example.com' ? 'admin' : role;
+
   await setDoc(doc(db, 'users', user.uid), {
     id: user.uid,
     name,
     email,
-    role,
+    role: userRole,
     joinedDate: new Date().toISOString(),
   });
 
