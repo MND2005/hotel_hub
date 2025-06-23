@@ -47,6 +47,9 @@ export default function SignupPage() {
     },
   });
 
+  const emailValue = form.watch("email");
+  const isAdminSignup = emailValue.toLowerCase() === 'admin@example.com';
+
   async function onSubmit(values: z.infer<typeof signupSchema>) {
     try {
       await signUp(values.name, values.email, values.password, values.role as "customer" | "owner");
@@ -122,27 +125,29 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>I am a...</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="customer">Customer</SelectItem>
-                          <SelectItem value="owner">Hotel Owner</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {!isAdminSignup && (
+                <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>I am a...</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="customer">Customer</SelectItem>
+                            <SelectItem value="owner">Hotel Owner</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
               <Button type="submit" className="w-full">Create Account</Button>
             </form>
           </Form>
