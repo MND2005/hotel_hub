@@ -1,0 +1,92 @@
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const hotels = [
+  { id: "HTL-001", owner: "John Doe", address: "123 Main St, Anytown", status: "active", joined: "2023-01-15" },
+  { id: "HTL-002", owner: "Jane Smith", address: "456 Oak Ave, Sometown", status: "pending", joined: "2023-02-20" },
+  { id: "HTL-003", owner: "Sam Wilson", address: "789 Pine Ln, Otherville", status: "active", joined: "2023-03-10" },
+  { id: "HTL-004", owner: "Emily Brown", address: "101 Maple Dr, Newcity", status: "inactive", joined: "2023-04-05" },
+];
+
+export default function HotelsPage() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Hotel Management</CardTitle>
+        <CardDescription>View and manage all hotels on the platform.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Hotel ID</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Address</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Joined Date</TableHead>
+              <TableHead>
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {hotels.map((hotel) => (
+              <TableRow key={hotel.id}>
+                <TableCell className="font-medium">{hotel.id}</TableCell>
+                <TableCell>{hotel.owner}</TableCell>
+                <TableCell>{hotel.address}</TableCell>
+                <TableCell>
+                  <Badge variant={hotel.status === 'active' ? 'default' : 'secondary'} className={hotel.status === 'inactive' ? 'bg-destructive/20 text-destructive-foreground' : ''}>
+                    {hotel.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{hotel.joined}</TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button aria-haspopup="true" size="icon" variant="ghost">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Toggle menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem>View Details</DropdownMenuItem>
+                      <DropdownMenuItem>Edit</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive">
+                        Deactivate
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}

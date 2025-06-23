@@ -1,0 +1,73 @@
+import Image from "next/image";
+import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Star } from "lucide-react";
+
+const hotels = [
+  { id: '1', rating: 4.5, distance: '0.5 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'boutique hotel exterior' },
+  { id: '2', rating: 4.8, distance: '1.2 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'modern city hotel' },
+  { id: '3', rating: 4.2, distance: '2.1 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'luxury resort pool' },
+  { id: '4', rating: 4.6, distance: '0.8 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'historic hotel facade' },
+];
+
+export default function CustomerExplorePage() {
+  return (
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="space-y-2 mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Find Your Stay</h1>
+        <p className="text-muted-foreground">
+          Explore hotels near you for room bookings and food orders.
+        </p>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-3">
+            <Card className="overflow-hidden h-[500px]">
+                <div className="relative w-full h-full">
+                <Image src="https://placehold.co/1200x600.png" data-ai-hint="world map" alt="Map" layout="fill" objectFit="cover" />
+                </div>
+            </Card>
+        </div>
+
+        <div className="lg:col-span-3 mt-8">
+            <h2 className="text-2xl font-bold tracking-tight mb-4">Hotels Near You</h2>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {hotels.map((hotel) => (
+                    <Card key={hotel.id} className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
+                        <Link href={`/customer/hotels/${hotel.id}`}>
+                            <CardHeader className="p-0">
+                                <div className="relative h-48 w-full">
+                                <Image src={hotel.imageUrl} data-ai-hint={hotel.aiHint} alt={`Hotel ${hotel.id}`} layout="fill" objectFit="cover" />
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-4">
+                                <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-1">
+                                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                                    <span className="font-semibold">{hotel.rating}</span>
+                                </div>
+                                <Badge variant="secondary">{hotel.distance}</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                An exclusive hotel, identified as Hotel #{hotel.id}.
+                                </p>
+                            </CardContent>
+                            <CardFooter className="p-4 pt-0">
+                                <Button className="w-full">View Details</Button>
+                            </CardFooter>
+                        </Link>
+                    </Card>
+                ))}
+            </div>
+        </div>
+      </div>
+    </div>
+  );
+}
