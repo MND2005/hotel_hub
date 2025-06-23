@@ -1,3 +1,5 @@
+'use client';
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -34,12 +36,7 @@ const withdrawalSchema = z.object({
   amount: z.coerce.number().positive("Amount must be positive."),
 });
 
-const withdrawalHistory = [
-    { id: "WDR-101", amount: 1200, status: "approved", date: "2023-04-15" },
-    { id: "WDR-102", amount: 850, status: "approved", date: "2023-03-20" },
-    { id: "WDR-103", amount: 1500, status: "pending", date: "2023-05-01" },
-    { id: "WDR-104", amount: 700, status: "denied", date: "2023-02-10" },
-];
+const withdrawalHistory: any[] = [];
 
 export default function WithdrawalsPage() {
   const form = useForm<z.infer<typeof withdrawalSchema>>({
@@ -59,7 +56,7 @@ export default function WithdrawalsPage() {
               <CardHeader>
                 <CardTitle>Request Withdrawal</CardTitle>
                 <CardDescription>
-                  Enter the amount you wish to withdraw. Balance: $2,345.67
+                  Your current balance is $0.00
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -103,18 +100,26 @@ export default function WithdrawalsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {withdrawalHistory.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.id}</TableCell>
-                    <TableCell>${item.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant={item.status === 'pending' ? 'outline' : item.status === 'approved' ? 'default' : 'destructive'}>
-                        {item.status}
-                      </Badge>
+                {withdrawalHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No withdrawal history found.
                     </TableCell>
-                    <TableCell>{item.date}</TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  withdrawalHistory.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.id}</TableCell>
+                      <TableCell>${item.amount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge variant={item.status === 'pending' ? 'outline' : item.status === 'approved' ? 'default' : 'destructive'}>
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{item.date}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

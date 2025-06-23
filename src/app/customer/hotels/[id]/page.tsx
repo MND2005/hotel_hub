@@ -12,29 +12,23 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Star, MapPin, Users, BedDouble, Plus, Minus } from "lucide-react";
 
+// In a real application, you would fetch this data based on the params.id
 const hotel = {
   id: "1",
-  address: "123 Ocean Drive, Sunnyvale, CA",
-  rating: 4.8,
-  reviews: 245,
-  description: "Experience unparalleled luxury and comfort at our seaside location. Hotel #1 offers breathtaking views and world-class amenities for an unforgettable stay. Please note that direct contact information and hotel names are not displayed for privacy.",
+  address: "...",
+  rating: 0,
+  reviews: 0,
+  description: "Details for this hotel will be available soon.",
   images: [
-    { src: "https://placehold.co/800x600.png", alt: "Hotel Lobby", aiHint: "hotel lobby interior" },
-    { src: "https://placehold.co/400x300.png", alt: "Hotel Pool", aiHint: "hotel swimming pool" },
-    { src: "https://placehold.co/400x300.png", alt: "Hotel Restaurant", aiHint: "fine dining restaurant" },
+    { src: "https://placehold.co/800x600.png", alt: "Hotel Main Image", aiHint: "hotel exterior" },
+    { src: "https://placehold.co/400x300.png", alt: "Hotel Image 2", aiHint: "hotel room" },
+    { src: "https://placehold.co/400x300.png", alt: "Hotel Image 3", aiHint: "hotel amenity" },
   ],
 };
 
-const rooms = [
-    { id: 1, type: "Deluxe King", price: 250, capacity: 2, imageUrl: "https://placehold.co/600x400.png", aiHint: "luxury hotel suite" },
-    { id: 2, type: "Ocean View Suite", price: 400, capacity: 3, imageUrl: "https://placehold.co/600x400.png", aiHint: "hotel room ocean view" },
-];
+const rooms: any[] = [];
+const menu: any[] = [];
 
-const menu = [
-    { id: 1, name: "Gourmet Burger", price: 22, description: "Wagyu beef, truffle aioli, brioche bun." },
-    { id: 2, name: "Lobster Bisque", price: 18, description: "Creamy, rich bisque with fresh lobster." },
-    { id: 3, name: "Truffle Fries", price: 12, description: "Hand-cut fries with parmesan and truffle oil." },
-];
 
 export default function HotelDetailPage({ params }: { params: { id: string } }) {
   return (
@@ -68,7 +62,9 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
                     <TabsTrigger value="food">Order Food</TabsTrigger>
                 </TabsList>
                 <TabsContent value="rooms" className="mt-6 space-y-4">
-                    {rooms.map(room => (
+                    {rooms.length === 0 ? (
+                      <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
+                    ) : rooms.map(room => (
                         <Card key={room.id} className="flex flex-col md:flex-row items-center">
                             <Image src={room.imageUrl} data-ai-hint={room.aiHint} alt={room.type} width={200} height={150} className="rounded-l-lg object-cover h-full w-full md:w-48"/>
                             <CardHeader className="flex-1">
@@ -87,7 +83,9 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
                 </TabsContent>
                 <TabsContent value="food" className="mt-6">
                    <div className="space-y-4">
-                    {menu.map(item => (
+                    {menu.length === 0 ? (
+                      <p className="text-muted-foreground">The menu is currently unavailable.</p>
+                    ) : menu.map(item => (
                         <div key={item.id} className="flex justify-between items-center">
                             <div>
                                 <h4 className="font-semibold">{item.name}</h4>
@@ -104,8 +102,8 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
                    </div>
                    <Separator className="my-6" />
                    <div className="flex justify-end items-center gap-4">
-                     <p className="text-lg font-bold">Total: $22.00</p>
-                     <Button size="lg">Add to Cart</Button>
+                     <p className="text-lg font-bold">Total: $0.00</p>
+                     <Button size="lg" disabled>Add to Cart</Button>
                    </div>
                 </TabsContent>
             </Tabs>

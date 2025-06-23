@@ -13,22 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Users, Hotel, DollarSign, Activity } from "lucide-react";
 
 const stats = [
-  { title: "Total Users", value: "1,250", icon: Users },
-  { title: "Total Hotels", value: "150", icon: Hotel },
-  { title: "Pending Withdrawals", value: "12", icon: DollarSign },
-  { title: "Total Revenue", value: "$120,500", icon: Activity },
+  { title: "Total Users", value: "0", icon: Users },
+  { title: "Total Hotels", value: "0", icon: Hotel },
+  { title: "Pending Withdrawals", value: "0", icon: DollarSign },
+  { title: "Total Revenue", value: "$0.00", icon: Activity },
 ];
 
-const recentActivity = [
-  { id: 1, description: "New hotel 'Sunset Inn' joined.", time: "5m ago", type: 'hotel' },
-  { id: 2, description: "User John Doe booked a room.", time: "10m ago", type: 'booking' },
-  { id: 3, description: "Withdrawal request for $500 from 'Cozy Corner'.", time: "1h ago", type: 'withdrawal' },
-  { id: 4, description: "New user signed up: jane.doe@email.com", time: "2h ago", type: 'user' },
-];
+const recentActivity: any[] = [];
 
 export default function AdminDashboard() {
   return (
@@ -61,12 +55,20 @@ export default function AdminDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentActivity.map((activity) => (
-                <TableRow key={activity.id}>
-                  <TableCell className="font-medium">{activity.description}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{activity.time}</TableCell>
+              {recentActivity.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="text-center h-24">
+                    No recent activity.
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                recentActivity.map((activity) => (
+                  <TableRow key={activity.id}>
+                    <TableCell className="font-medium">{activity.description}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{activity.time}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

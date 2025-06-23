@@ -18,11 +18,7 @@ import {
     TableRow,
   } from "@/components/ui/table";
 
-const paymentHistory = [
-    { id: "PAY-001", date: "2023-11-20", amount: 250.00, method: "Visa **** 4242" },
-    { id: "PAY-002", date: "2023-11-18", amount: 45.50, method: "Mastercard **** 5678" },
-    { id: "PAY-003", date: "2023-11-22", amount: 78.90, method: "Visa **** 4242" },
-]
+const paymentHistory: any[] = [];
 
 export default function CustomerProfilePage() {
   return (
@@ -70,14 +66,22 @@ export default function CustomerProfilePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {paymentHistory.map((payment) => (
-                            <TableRow key={payment.id}>
-                                <TableCell className="font-medium">{payment.id}</TableCell>
-                                <TableCell>{payment.date}</TableCell>
-                                <TableCell>${payment.amount.toFixed(2)}</TableCell>
-                                <TableCell>{payment.method}</TableCell>
-                            </TableRow>
-                        ))}
+                            {paymentHistory.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        No payment history found.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                paymentHistory.map((payment) => (
+                                    <TableRow key={payment.id}>
+                                        <TableCell className="font-medium">{payment.id}</TableCell>
+                                        <TableCell>{payment.date}</TableCell>
+                                        <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                                        <TableCell>{payment.method}</TableCell>
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                     </CardContent>

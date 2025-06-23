@@ -24,12 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const hotels = [
-  { id: "HTL-001", owner: "John Doe", address: "123 Main St, Anytown", status: "active", joined: "2023-01-15" },
-  { id: "HTL-002", owner: "Jane Smith", address: "456 Oak Ave, Sometown", status: "pending", joined: "2023-02-20" },
-  { id: "HTL-003", owner: "Sam Wilson", address: "789 Pine Ln, Otherville", status: "active", joined: "2023-03-10" },
-  { id: "HTL-004", owner: "Emily Brown", address: "101 Maple Dr, Newcity", status: "inactive", joined: "2023-04-05" },
-];
+const hotels: any[] = [];
 
 export default function HotelsPage() {
   return (
@@ -53,37 +48,45 @@ export default function HotelsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {hotels.map((hotel) => (
-              <TableRow key={hotel.id}>
-                <TableCell className="font-medium">{hotel.id}</TableCell>
-                <TableCell>{hotel.owner}</TableCell>
-                <TableCell>{hotel.address}</TableCell>
-                <TableCell>
-                  <Badge variant={hotel.status === 'active' ? 'default' : 'secondary'} className={hotel.status === 'inactive' ? 'bg-destructive/20 text-destructive-foreground' : ''}>
-                    {hotel.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>{hotel.joined}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        Deactivate
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {hotels.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center h-24">
+                  No hotels found.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              hotels.map((hotel) => (
+                <TableRow key={hotel.id}>
+                  <TableCell className="font-medium">{hotel.id}</TableCell>
+                  <TableCell>{hotel.owner}</TableCell>
+                  <TableCell>{hotel.address}</TableCell>
+                  <TableCell>
+                    <Badge variant={hotel.status === 'active' ? 'default' : 'secondary'} className={hotel.status === 'inactive' ? 'bg-destructive/20 text-destructive-foreground' : ''}>
+                      {hotel.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{hotel.joined}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">
+                          Deactivate
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>

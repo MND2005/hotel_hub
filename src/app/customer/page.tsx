@@ -11,12 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import Map from "@/components/app/map";
 
-const hotels = [
-  { id: '1', rating: 4.5, distance: '0.5 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'boutique hotel exterior' },
-  { id: '2', rating: 4.8, distance: '1.2 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'modern city hotel' },
-  { id: '3', rating: 4.2, distance: '2.1 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'luxury resort pool' },
-  { id: '4', rating: 4.6, distance: '0.8 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'historic hotel facade' },
-];
+const hotels: any[] = [];
 
 export default function CustomerExplorePage() {
   return (
@@ -36,7 +31,11 @@ export default function CustomerExplorePage() {
         <div className="lg:col-span-3 mt-8">
             <h2 className="text-2xl font-bold tracking-tight mb-4">Hotels Near You</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {hotels.map((hotel) => (
+                {hotels.length === 0 ? (
+                    <div className="lg:col-span-4 text-center text-muted-foreground py-10">
+                        No hotels found near you.
+                    </div>
+                ) : hotels.map((hotel) => (
                     <Card key={hotel.id} className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
                         <Link href={`/customer/hotels/${hotel.id}`}>
                             <CardHeader className="p-0">

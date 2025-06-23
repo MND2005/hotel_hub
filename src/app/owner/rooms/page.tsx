@@ -11,35 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BedDouble, Users, DollarSign, PlusCircle } from "lucide-react";
 
-const rooms = [
-  { 
-    id: 1, 
-    type: "Standard Queen", 
-    price: 150, 
-    capacity: 2, 
-    isAvailable: true, 
-    imageUrl: "https://placehold.co/600x400.png",
-    aiHint: "modern hotel room"
-  },
-  { 
-    id: 2, 
-    type: "Deluxe King", 
-    price: 220, 
-    capacity: 2, 
-    isAvailable: true, 
-    imageUrl: "https://placehold.co/600x400.png",
-    aiHint: "luxury hotel suite"
-  },
-  { 
-    id: 3, 
-    type: "Family Suite", 
-    price: 300, 
-    capacity: 4, 
-    isAvailable: false, 
-    imageUrl: "https://placehold.co/600x400.png",
-    aiHint: "spacious family room"
-  },
-];
+const rooms: any[] = [];
 
 export default function RoomsPage() {
   return (
@@ -54,7 +26,11 @@ export default function RoomsPage() {
             </Button>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {rooms.map((room) => (
+            {rooms.length === 0 ? (
+                <div className="md:col-span-2 lg:col-span-3 text-center text-muted-foreground py-10">
+                    You haven't added any rooms yet.
+                </div>
+            ) : rooms.map((room) => (
                 <Card key={room.id} className="overflow-hidden">
                     <CardHeader className="p-0">
                         <div className="relative h-48 w-full">

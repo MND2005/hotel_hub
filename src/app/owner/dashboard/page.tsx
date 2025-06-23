@@ -18,19 +18,13 @@ import { Activity, Users, BedDouble, Utensils } from "lucide-react";
 import { IncomeChart } from '@/components/owner/income-chart';
 
 const stats = [
-    { title: "Total Revenue", value: "$45,231.89", icon: Activity },
-    { title: "Bookings", value: "+250", icon: BedDouble },
-    { title: "Food Orders", value: "+1,234", icon: Utensils },
-    { title: "New Customers", value: "+57", icon: Users },
+    { title: "Total Revenue", value: "$0.00", icon: Activity },
+    { title: "Bookings", value: "0", icon: BedDouble },
+    { title: "Food Orders", value: "0", icon: Utensils },
+    { title: "New Customers", value: "0", icon: Users },
   ];
 
-const recentOrders = [
-    { id: "ORD-001", customer: "Olivia Martin", date: "2023-11-23", amount: 150.00, type: "room", status: "completed" },
-    { id: "ORD-002", customer: "Liam Anderson", date: "2023-11-23", amount: 25.50, type: "food", status: "completed" },
-    { id: "ORD-003", customer: "Noah Garcia", date: "2023-11-22", amount: 250.00, type: "room", status: "confirmed" },
-    { id: "ORD-004", customer: "Emma Wilson", date: "2023-11-22", amount: 42.75, type: "food", status: "completed" },
-    { id: "ORD-005", customer: "James Martinez", date: "2023-11-21", amount: 89.99, type: "food", status: "cancelled" },
-];
+const recentOrders: any[] = [];
 
 export default function OwnerDashboard() {
   return (
@@ -69,19 +63,27 @@ export default function OwnerDashboard() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {recentOrders.map((order) => (
-                                <TableRow key={order.id}>
-                                <TableCell>
-                                    <div className="font-medium">{order.customer}</div>
-                                    <div className="text-sm text-muted-foreground">{order.date}</div>
-                                </TableCell>
-                                <TableCell>{order.type}</TableCell>
-                                <TableCell>
-                                    <Badge variant={order.status === 'completed' ? 'default' : order.status === 'confirmed' ? 'outline' : 'destructive'}>{order.status}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
+                             {recentOrders.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        No recent orders.
+                                    </TableCell>
                                 </TableRow>
-                            ))}
+                             ) : (
+                                recentOrders.map((order) => (
+                                    <TableRow key={order.id}>
+                                    <TableCell>
+                                        <div className="font-medium">{order.customer}</div>
+                                        <div className="text-sm text-muted-foreground">{order.date}</div>
+                                    </TableCell>
+                                    <TableCell>{order.type}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={order.status === 'completed' ? 'default' : order.status === 'confirmed' ? 'outline' : 'destructive'}>{order.status}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))
+                             )}
                         </TableBody>
                     </Table>
                 </CardContent>

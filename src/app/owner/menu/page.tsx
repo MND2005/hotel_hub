@@ -18,21 +18,9 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
 const menuItems = {
-    breakfast: [
-        { id: 1, name: "Classic Pancakes", price: 12.50 },
-        { id: 2, name: "Avocado Toast", price: 14.00 },
-        { id: 3, name: "Sunrise Omelette", price: 13.75 },
-    ],
-    lunch: [
-        { id: 4, name: "Caesar Salad", price: 15.00 },
-        { id: 5, name: "Club Sandwich", price: 16.50 },
-        { id: 6, name: "Tomato Soup", price: 9.00 },
-    ],
-    dinner: [
-        { id: 7, name: "Grilled Salmon", price: 28.00 },
-        { id: 8, name: "Filet Mignon", price: 45.00 },
-        { id: 9, name: "Mushroom Risotto", price: 22.50 },
-    ],
+    breakfast: [],
+    lunch: [],
+    dinner: [],
 };
 
 const MenuTable = ({ items }: { items: { id: number, name: string, price: number }[] }) => (
@@ -45,16 +33,24 @@ const MenuTable = ({ items }: { items: { id: number, name: string, price: number
             </TableRow>
         </TableHeader>
         <TableBody>
-            {items.map(item => (
-                <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>${item.price.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">Edit</Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Delete</Button>
+            {items.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                        No items in this category.
                     </TableCell>
                 </TableRow>
-            ))}
+            ) : (
+                items.map(item => (
+                    <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>${item.price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                            <Button variant="ghost" size="sm">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Delete</Button>
+                        </TableCell>
+                    </TableRow>
+                ))
+            )}
         </TableBody>
     </Table>
 )
