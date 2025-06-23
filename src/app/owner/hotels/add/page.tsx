@@ -27,6 +27,10 @@ import { Switch } from "@/components/ui/switch";
 import Map from "@/components/app/map";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { addHotel } from "@/lib/firebase/hotels";
+import { auth } from "@/lib/firebase";
+
 
 const addHotelSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -39,6 +43,7 @@ const addHotelSchema = z.object({
 
 export default function AddHotelPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [markerPosition, setMarkerPosition] = useState<{lat: number, lng: number} | null>(null);
   const sriLankaCenter = { lat: 7.8731, lng: 80.7718 };
 
@@ -54,11 +59,30 @@ export default function AddHotelPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof addHotelSchema>) {
-    console.log("Submitting Hotel Data:", values);
-    // Here you would typically call a function to save the data to your database
-    // After saving, redirect to the hotels list
-    router.push("/owner/hotels");
+  async function onSubmit(values: z.infer<typeof addHotelSchema>) {
+    if (!auth.currentUser) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to add a hotel.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await addHotel(values);
+      toast({
+        title: "Hotel Added",
+        description: "Your new hotel has been saved successfully.",
+      });
+      router.push("/owner/hotels");
+    } catch (error) {
+      console.error("Failed to add hotel:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add hotel. Please try again.",
+        variant: "destructive",
+      });
+    }
   }
   
   const handleMapClick = (e: any) => {

@@ -1,3 +1,4 @@
+
 export type User = {
   id: string;
   name: string;
@@ -9,12 +10,12 @@ export type User = {
 export type Hotel = {
   id: string;
   ownerId: string;
+  name: string;
+  description: string;
   address: string;
   latitude: number;
   longitude: number;
   isOpen: boolean;
-  rating: number;
-  imageUrl: string;
 };
 
 export type Room = {
