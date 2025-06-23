@@ -1,3 +1,6 @@
+
+'use client';
+
 import Image from "next/image";
 import {
   Card,
@@ -14,8 +17,10 @@ import { Star, MapPin, Users, BedDouble, Plus, Minus } from "lucide-react";
 import { getHotel, getAllHotels } from "@/lib/firebase/hotels";
 import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
-import { notFound } from 'next/navigation';
-import type { Hotel } from "@/lib/types";
+import { useRouter } from 'next/navigation';
+import type { Hotel, Room, MenuItem } from "@/lib/types";
+import { useState, useEffect, useMemo } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const placeholderImages = [
@@ -33,13 +38,117 @@ export async function generateStaticParams() {
     }));
 }
 
-export default async function HotelDetailPage({ params }: { params: { id: string } }) {
-  const hotel = await getHotel(params.id);
-  const rooms = await getRoomsByHotel(params.id);
-  const menu = await getMenuItemsByHotel(params.id);
+const HotelDetailSkeleton = () => (
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8 max-h-[500px]">
+        <div className="col-span-2 row-span-2"><Skeleton className="w-full h-full min-h-[300px]" /></div>
+        <Skeleton className="w-full h-full min-h-[146px]" />
+        <Skeleton className="w-full h-full min-h-[146px]" />
+      </div>
+       <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
+            <Skeleton className="h-9 w-3/4" />
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-20 w-full" />
+            <div className="space-y-4 pt-4">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-40 w-full" />
+            </div>
+        </div>
+        <div className="lg:col-span-1">
+            <Card>
+                <CardHeader><Skeleton className="h-7 w-1/2" /></CardHeader>
+                <CardContent><Skeleton className="h-24 w-full" /></CardContent>
+                <CardFooter><Skeleton className="h-10 w-full" /></CardFooter>
+            </Card>
+        </div>
+      </div>
+    </div>
+)
+
+
+export default function HotelDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [menu, setMenu] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Cart state
+  const [bookedRoom, setBookedRoom] = useState<Room | null>(null);
+  const [foodOrder, setFoodOrder] = useState<Record<string, { item: MenuItem, quantity: number }>>({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+        if (!params.id) return;
+        setLoading(true);
+        try {
+            const [hotelData, roomsData, menuData] = await Promise.all([
+                getHotel(params.id),
+                getRoomsByHotel(params.id),
+                getMenuItemsByHotel(params.id)
+            ]);
+
+            if (!hotelData) {
+                router.push('/not-found');
+                return;
+            }
+
+            setHotel(hotelData);
+            setRooms(roomsData);
+            setMenu(menuData);
+        } catch (error) {
+            console.error("Failed to fetch hotel details", error);
+            // Optionally show a toast error
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchData();
+  }, [params.id, router]);
+
+  const handleBookRoom = (room: Room) => {
+    setBookedRoom(prevRoom => prevRoom?.id === room.id ? null : room);
+  };
+
+  const handleFoodQuantityChange = (item: MenuItem, change: number) => {
+    setFoodOrder(prevOrder => {
+      const existingItem = prevOrder[item.id];
+      const newQuantity = (existingItem?.quantity || 0) + change;
+
+      if (newQuantity <= 0) {
+        const newOrder = { ...prevOrder };
+        delete newOrder[item.id];
+        return newOrder;
+      }
+
+      return {
+        ...prevOrder,
+        [item.id]: { item, quantity: newQuantity },
+      };
+    });
+  };
+
+  const total = useMemo(() => {
+    const roomPrice = bookedRoom?.price || 0;
+    const foodPrice = Object.values(foodOrder).reduce((acc, { item, quantity }) => {
+        return acc + (item.price * quantity);
+    }, 0);
+    return roomPrice + foodPrice;
+  }, [bookedRoom, foodOrder]);
+
+  if (loading) {
+    return <HotelDetailSkeleton />;
+  }
 
   if (!hotel) {
-    notFound();
+    // This case should be handled by the redirect in useEffect, but as a fallback:
+    return (
+        <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
+            <h1 className="text-2xl font-bold">Hotel not found.</h1>
+            <p className="text-muted-foreground">The hotel you are looking for does not exist or is unavailable.</p>
+        </div>
+    );
   }
 
   return (
@@ -78,18 +187,19 @@ export default async function HotelDetailPage({ params }: { params: { id: string
                     ) : rooms.map(room => (
                         <Card key={room.id} className="flex flex-col md:flex-row items-center">
                             <div className="relative w-full md:w-48 h-48 md:h-full">
-                               <Image src={room.imageUrl} data-ai-hint={room.aiHint} alt={room.type} layout="fill" objectFit="cover" className="rounded-l-lg" />
+                               <Image src={room.imageUrl} data-ai-hint={room.aiHint} alt={room.type} fill className="object-cover rounded-l-lg" />
                             </div>
                             <CardHeader className="flex-1">
                                 <CardTitle>{room.type}</CardTitle>
                                 <CardDescription className="flex items-center gap-4 pt-1">
                                     <span className="flex items-center gap-1"><Users className="w-4 h-4"/> {room.capacity} Guests</span>
-                                    <span className="flex items-center gap-1"><BedDouble className="w-4 h-4"/> King Bed</span>
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="flex items-center gap-4 p-4">
                                 <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                <Button disabled>Book Now</Button>
+                                <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
+                                  {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
+                                </Button>
                             </CardContent>
                         </Card>
                     ))}
@@ -106,17 +216,16 @@ export default async function HotelDetailPage({ params }: { params: { id: string
                                 <p className="font-bold text-primary mt-1">${item.price.toFixed(2)}</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button size="icon" variant="outline" disabled><Minus className="w-4 h-4"/></Button>
-                                <span>0</span>
-                                <Button size="icon" variant="outline" disabled><Plus className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
+                                  <Minus className="w-4 h-4"/>
+                                </Button>
+                                <span>{foodOrder[item.id]?.quantity || 0}</span>
+                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
+                                  <Plus className="w-4 h-4"/>
+                                </Button>
                             </div>
                         </div>
                     ))}
-                   </div>
-                   <Separator className="my-6" />
-                   <div className="flex justify-end items-center gap-4">
-                     <p className="text-lg font-bold">Total: $0.00</p>
-                     <Button size="lg" disabled>Add to Cart</Button>
                    </div>
                 </TabsContent>
             </Tabs>
@@ -128,10 +237,40 @@ export default async function HotelDetailPage({ params }: { params: { id: string
                     <CardTitle>Your Booking</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                   <p className="text-muted-foreground text-sm text-center">Your cart is empty.</p>
+                   {(!bookedRoom && Object.keys(foodOrder).length === 0) ? (
+                     <p className="text-muted-foreground text-sm text-center">Your cart is empty.</p>
+                   ) : (
+                     <div className="space-y-3">
+                        {bookedRoom && (
+                          <div>
+                            <h4 className="font-semibold">Room</h4>
+                            <div className="flex justify-between items-center text-sm">
+                              <span>{bookedRoom.type} (1 night)</span>
+                              <span>${bookedRoom.price.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
+                        {Object.keys(foodOrder).length > 0 && (
+                          <div>
+                            <h4 className="font-semibold">Food Order</h4>
+                            {Object.values(foodOrder).map(({ item, quantity }) => (
+                              <div key={item.id} className="flex justify-between items-center text-sm">
+                                <span>{item.name} x{quantity}</span>
+                                <span>${(item.price * quantity).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <Separator />
+                         <div className="flex justify-between items-center font-bold text-lg">
+                           <span>Total</span>
+                           <span>${total.toFixed(2)}</span>
+                         </div>
+                     </div>
+                   )}
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" disabled>Checkout</Button>
+                    <Button className="w-full" disabled={total === 0}>Checkout</Button>
                 </CardFooter>
             </Card>
         </div>
