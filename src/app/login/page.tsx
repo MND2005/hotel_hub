@@ -70,11 +70,15 @@ export default function LoginPage() {
       } else {
         throw new Error("User data not found in Firestore.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
+      let description = "Invalid email or password. Please try again.";
+      if (error.code === 'auth/configuration-not-found') {
+        description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";
+      }
       toast({
         title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
+        description: description,
         variant: "destructive",
       });
     }
