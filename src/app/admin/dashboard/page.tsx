@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Card,
   CardContent,
@@ -18,13 +21,35 @@ import { getAllUsers } from "@/lib/firebase/users";
 import { getAllHotelsForAdmin } from "@/lib/firebase/hotels";
 import { getAllWithdrawals } from "@/lib/firebase/withdrawals";
 import { formatDistanceToNow } from "date-fns";
+import { useState, useEffect } from "react";
+import type { User, Hotel as HotelType, Withdrawal } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function AdminDashboard() {
-  const [users, hotels, withdrawals] = await Promise.all([
-    getAllUsers(),
-    getAllHotelsForAdmin(),
-    getAllWithdrawals(),
-  ]);
+export default function AdminDashboard() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [hotels, setHotels] = useState<HotelType[]>([]);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [usersData, hotelsData, withdrawalsData] = await Promise.all([
+          getAllUsers(),
+          getAllHotelsForAdmin(),
+          getAllWithdrawals(),
+        ]);
+        setUsers(usersData);
+        setHotels(hotelsData);
+        setWithdrawals(withdrawalsData);
+      } catch (error) {
+        console.error("Failed to fetch admin data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const stats = [
     { title: "Total Users", value: users.length.toString(), icon: Users },
@@ -55,6 +80,44 @@ export default async function AdminDashboard() {
   const recentActivity = [...recentUsers].sort(
     (a, b) => b.date.getTime() - a.date.getTime()
   );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-1/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              An overview of the latest platform events.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex justify-between">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-5 w-1/4" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

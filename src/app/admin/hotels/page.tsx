@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Card,
   CardContent,
@@ -25,14 +28,70 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getAllHotelsForAdmin } from "@/lib/firebase/hotels";
 import { getAllUsers } from "@/lib/firebase/users";
+import { useState, useEffect } from "react";
+import type { Hotel, User } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function HotelsPage() {
-  const [hotels, users] = await Promise.all([
-    getAllHotelsForAdmin(),
-    getAllUsers(),
-  ]);
+export default function HotelsPage() {
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [hotelsData, usersData] = await Promise.all([
+          getAllHotelsForAdmin(),
+          getAllUsers(),
+        ]);
+        setHotels(hotelsData);
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Failed to fetch hotels and users", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const userMap = new Map(users.map((user) => [user.id, user.name]));
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {[...Array(5)].map((_, i) => (
+                  <TableHead key={i}>
+                    <Skeleton className="h-5 w-full" />
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  {[...Array(5)].map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  }
+
 
   return (
     <Card>

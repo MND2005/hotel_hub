@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Card,
   CardContent,
@@ -5,17 +8,81 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from "@/components/ui/table";
 import { getAllWithdrawals } from "@/lib/firebase/withdrawals";
 import { getAllUsers } from "@/lib/firebase/users";
 import { WithdrawalClient } from "./client";
+import { useState, useEffect } from "react";
+import type { Withdrawal, User } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function WithdrawalsPage() {
-  const [withdrawals, users] = await Promise.all([
-    getAllWithdrawals(),
-    getAllUsers(),
-  ]);
+export default function WithdrawalsPage() {
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [withdrawalsData, usersData] = await Promise.all([
+          getAllWithdrawals(),
+          getAllUsers(),
+        ]);
+        setWithdrawals(withdrawalsData);
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Failed to fetch withdrawals and users", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
 
   const userMap = new Map(users.map((user) => [user.id, user.name]));
+
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-96 mt-2" />
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        {[...Array(5)].map((_, i) => (
+                        <TableHead key={i}>
+                            <Skeleton className="h-5 w-full" />
+                        </TableHead>
+                        ))}
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {[...Array(5)].map((_, i) => (
+                        <TableRow key={i}>
+                        {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                            <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                        ))}
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    )
+  }
 
   return (
     <Card>
