@@ -189,7 +189,7 @@ export default function HotelsPage() {
                         <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/customer/hotels/${hotel.id}`)}>
                             View as Customer
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/owner/hotels/${hotel.id}`)}>
+                        <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/admin/hotels/${hotel.id}`)}>
                             Edit Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
