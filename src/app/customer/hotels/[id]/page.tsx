@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Star, MapPin, Users, BedDouble, Plus, Minus } from "lucide-react";
-import { getHotel, getAllHotels } from "@/lib/firebase/hotels";
+import { getHotel } from "@/lib/firebase/hotels";
 import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
 import { useRouter } from 'next/navigation';
@@ -28,15 +28,6 @@ const placeholderImages = [
     { src: "https://placehold.co/400x300.png", alt: "Hotel Image 2", aiHint: "hotel room" },
     { src: "https://placehold.co/400x300.png", alt: "Hotel Image 3", aiHint: "hotel amenity" },
 ];
-
-// This function can be used with "generateStaticParams" to statically generate all hotel pages at build time.
-// https://nextjs.org/docs/app/api-reference/functions/generate-static-params
-export async function generateStaticParams() {
-    const hotels: Hotel[] = await getAllHotels();
-    return hotels.map((hotel) => ({
-      id: hotel.id,
-    }));
-}
 
 const HotelDetailSkeleton = () => (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
