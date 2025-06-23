@@ -2,46 +2,60 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // --- Helper Functions ---
-    function isAuth() {
-      return request.auth != null;
+    
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
-    function isUser(userId) {
-      return isAuth() && request.auth.uid == userId;
+    
+    function isAdmin() {
+      return request.auth != null && getUserRole(request.auth.uid) == 'admin';
     }
-    function isRole(role) {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+
+    function isOwner(resourceOwnerId) {
+        return request.auth != null && request.auth.uid == resourceOwnerId;
     }
+    
     function isHotelOwner(hotelId) {
-      return isUser(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
+        let hotelOwnerId = get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId;
+        return isOwner(hotelOwnerId);
     }
 
-    // --- Collection Rules ---
     match /users/{userId} {
-      allow read, update: if isUser(userId);
-      allow create: if isAuth();
+      allow get: if isAdmin() || isOwner(userId);
+      allow list: if isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    match /hotels/{hotelId} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null;
+
+      allow create: if request.auth != null 
+                    && getUserRole(request.auth.uid) == 'owner'
+                    && isOwner(request.resource.data.ownerId);
+
+      allow update: if isHotelOwner(hotelId) || isAdmin();
+      allow delete: if isHotelOwner(hotelId) || isAdmin();
+
+      match /rooms/{roomId} {
+        allow get, list: if request.auth != null;
+        allow write: if isHotelOwner(hotelId) || isAdmin();
+      }
+
+      match /menuItems/{menuItemId} {
+        allow get, list: if request.auth != null;
+        allow write: if isHotelOwner(hotelId) || isAdmin();
+      }
     }
 
-    match /hotels/{hotelId} {
-      // Authenticated users can read hotels.
-      allow read: if isAuth();
-      // Users with the 'owner' role can create hotels.
-      allow create: if isRole('owner');
-      // The user who owns the hotel can update or delete it.
-      allow update, delete: if isUser(resource.data.ownerId);
-
-      // --- Subcollection Rules ---
-      match /rooms/{roomId} {
-        allow read: if isAuth();
-        // The owner of the parent hotel can write to the rooms subcollection.
-        allow write: if isHotelOwner(hotelId);
-      }
-      
-      match /menuItems/{menuItemId} {
-        allow read: if isAuth();
-        // The owner of the parent hotel can write to the menuItems subcollection.
-        allow write: if isHotelOwner(hotelId);
-      }
+    match /withdrawals/{withdrawalId} {
+      allow get: if isAdmin() || isOwner(get(/databases/$(database)/documents/withdrawals/$(withdrawalId)).data.ownerId);
+      allow list: if isAdmin();
+      allow create: if getUserRole(request.auth.uid) == 'owner' && isOwner(request.resource.data.ownerId);
+      allow update: if isAdmin();
+      allow delete: if false;
     }
   }
 }
