@@ -3,7 +3,7 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Hotel, BedDouble, Utensils, ArrowLeft } from "lucide-react";
@@ -16,7 +16,8 @@ export default function HotelManagementLayout({
   params: { id: string };
 }) {
   const pathname = usePathname();
-  const hotelId = params.id;
+  const componentParams = useParams();
+  const hotelId = componentParams.id as string;
 
   const navLinks = [
     { href: `/owner/hotels/${hotelId}`, label: 'Details', icon: Hotel, exact: true },
@@ -62,7 +63,7 @@ export default function HotelManagementLayout({
             </CardContent>
           </Card>
         </div>
-        <div className="md:col-span-3">
+        <div className="md-col-span-3">
             {children}
         </div>
       </div>
