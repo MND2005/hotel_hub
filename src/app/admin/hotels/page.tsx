@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { toggleHotelStatus } from "./actions";
+import { HotelPreviewDialog } from "@/components/app/hotel-preview-dialog";
 
 export default function HotelsPage() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -42,6 +43,9 @@ export default function HotelsPage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,7 +78,6 @@ export default function HotelsPage() {
           title: 'Success',
           description: `Hotel status has been updated.`,
         });
-        // Optimistically update UI
         setHotels(currentHotels =>
           currentHotels.map(h =>
             h.id === hotelId ? { ...h, isOpen: !currentStatus } : h
@@ -88,6 +91,11 @@ export default function HotelsPage() {
         });
       }
     });
+  };
+
+  const handlePreview = (hotel: Hotel) => {
+    setSelectedHotel(hotel);
+    setIsPreviewOpen(true);
   };
 
   const userMap = new Map(users.map((user) => [user.id, user.name]));
@@ -129,85 +137,92 @@ export default function HotelsPage() {
 
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Hotel Management</CardTitle>
-        <CardDescription>
-          View and manage all hotels on the platform.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Hotel Name</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {hotels.length === 0 ? (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Hotel Management</CardTitle>
+          <CardDescription>
+            View and manage all hotels on the platform.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
-                  No hotels found.
-                </TableCell>
+                <TableHead>Hotel Name</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
-            ) : (
-              hotels.map((hotel) => (
-                <TableRow key={hotel.id}>
-                  <TableCell className="font-medium">{hotel.name}</TableCell>
-                  <TableCell>
-                    {userMap.get(hotel.ownerId) || "Unknown Owner"}
-                  </TableCell>
-                  <TableCell className="truncate max-w-sm">
-                    {hotel.address}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={hotel.isOpen ? "default" : "secondary"}>
-                      {hotel.isOpen ? "Open" : "Closed"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          aria-haspopup="true"
-                          size="icon"
-                          variant="ghost"
-                          disabled={isPending}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/customer/hotels/${hotel.id}`)}>
-                            View as Customer
-                        </DropdownMenuItem>
-                        <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/admin/hotels/${hotel.id}`)}>
-                            Edit Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={isPending}
-                          onClick={() => handleToggle(hotel.id, hotel.isOpen)}
-                          className={hotel.isOpen ? "text-destructive" : ""}
-                        >
-                          {hotel.isOpen ? 'Deactivate' : 'Activate'}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            </TableHeader>
+            <TableBody>
+              {hotels.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center h-24">
+                    No hotels found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+              ) : (
+                hotels.map((hotel) => (
+                  <TableRow key={hotel.id}>
+                    <TableCell className="font-medium">{hotel.name}</TableCell>
+                    <TableCell>
+                      {userMap.get(hotel.ownerId) || "Unknown Owner"}
+                    </TableCell>
+                    <TableCell className="truncate max-w-sm">
+                      {hotel.address}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={hotel.isOpen ? "default" : "secondary"}>
+                        {hotel.isOpen ? "Open" : "Closed"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            aria-haspopup="true"
+                            size="icon"
+                            variant="ghost"
+                            disabled={isPending}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem disabled={isPending} onClick={() => handlePreview(hotel)}>
+                              View as Customer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/admin/hotels/${hotel.id}`)}>
+                              Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={isPending}
+                            onClick={() => handleToggle(hotel.id, hotel.isOpen)}
+                            className={hotel.isOpen ? "text-destructive" : ""}
+                          >
+                            {hotel.isOpen ? 'Deactivate' : 'Activate'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      <HotelPreviewDialog
+        hotel={selectedHotel}
+        isOpen={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+      />
+    </>
   );
 }
