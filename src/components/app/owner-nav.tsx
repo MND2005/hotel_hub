@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Hotel, Utensils, BedDouble, DollarSign, LogOut } from 'lucide-react';
+import { Home, Hotel, DollarSign, LogOut } from 'lucide-react';
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -12,9 +13,7 @@ import { cn } from '@/lib/utils';
 
 const links = [
   { href: '/owner/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/owner/hotel', label: 'Hotel Details', icon: Hotel },
-  { href: '/owner/rooms', label: 'Rooms', icon: BedDouble },
-  { href: '/owner/menu', label: 'Menu', icon: Utensils },
+  { href: '/owner/hotels', label: 'My Hotels', icon: Hotel },
   { href: '/owner/withdrawals', label: 'Withdrawals', icon: DollarSign },
 ];
 
