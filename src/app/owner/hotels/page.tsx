@@ -121,7 +121,7 @@ export default function OwnerHotelsPage() {
             <Card key={hotel.id} className="overflow-hidden transition-all hover:shadow-lg">
               <Link href={`/owner/hotels/${hotel.id}`}>
                 <CardHeader className="p-0 relative h-48 w-full">
-                    <Image src={"https://placehold.co/600x400.png"} data-ai-hint="hotel exterior" alt={hotel.name} layout="fill" objectFit="cover" />
+                    <Image src={hotel.imageUrls?.[0] || "https://placehold.co/600x400.png"} data-ai-hint="hotel exterior" alt={hotel.name} layout="fill" objectFit="cover" />
                 </CardHeader>
                 <CardContent className="p-4">
                     <CardTitle className="mb-2 truncate">{hotel.name}</CardTitle>

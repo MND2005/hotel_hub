@@ -158,7 +158,7 @@ export default function CustomerExplorePage() {
                         <Link href={`/customer/hotels/${hotel.id}`}>
                             <CardHeader className="p-0">
                                 <div className="relative h-48 w-full">
-                                <Image src={"https://placehold.co/600x400.png"} data-ai-hint="hotel exterior" alt={hotel.name} layout="fill" objectFit="cover" />
+                                <Image src={hotel.imageUrls?.[0] || "https://placehold.co/600x400.png"} data-ai-hint="hotel exterior" alt={hotel.name} layout="fill" objectFit="cover" />
                                 </div>
                             </CardHeader>
                             <CardContent className="p-4">
