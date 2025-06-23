@@ -78,6 +78,8 @@ export default function LoginPage() {
         description = "Invalid email or password. Please try again.";
       } else if (error?.code === 'auth/configuration-not-found') {
         description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";
+      } else if (error.message === "User data not found in Firestore.") {
+        description = "Could not find your user profile. Please try signing up again or contact support if the issue persists.";
       }
       
       toast({
