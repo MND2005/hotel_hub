@@ -72,10 +72,14 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Login failed", error);
-      let description = "Invalid email or password. Please try again.";
-      if (error.code === 'auth/configuration-not-found') {
+      let description = "An unexpected error occurred. Please try again.";
+
+      if (error?.code === 'auth/invalid-credential') {
+        description = "Invalid email or password. Please try again.";
+      } else if (error?.code === 'auth/configuration-not-found') {
         description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";
       }
+      
       toast({
         title: "Login Failed",
         description: description,
