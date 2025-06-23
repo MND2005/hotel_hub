@@ -70,3 +70,18 @@ export async function updateHotel(hotelId: string, hotelData: Partial<Omit<Hotel
     const hotelDocRef = doc(db, 'hotels', hotelId);
     await updateDoc(hotelDocRef, hotelData);
 }
+
+export async function getAllHotels(): Promise<Hotel[]> {
+    if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+    }
+
+    const hotels: Hotel[] = [];
+    const q = query(collection(db, "hotels"), where("isOpen", "==", true));
+    
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+        hotels.push({ id: doc.id, ...doc.data() } as Hotel);
+    });
+    return hotels;
+}

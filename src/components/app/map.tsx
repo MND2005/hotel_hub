@@ -1,28 +1,42 @@
+
 'use client';
 
+import React from 'react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { MapPin } from 'lucide-react';
-import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
+import { useJsApiLoader, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+
+type MapMarker = {
+  lat: number;
+  lng: number;
+  name?: string;
+};
 
 type MapProps = {
   center: { lat: number; lng: number };
   zoom?: number;
   onMapClick?: (e: any) => void;
-  markerPosition?: { lat: number; lng: number } | null;
+  markerPosition?: MapMarker | null;
+  markers?: MapMarker[];
   className?: string;
 };
 
-const Map = ({ center, zoom = 12, onMapClick, markerPosition, className }: MapProps) => {
+const Map = ({ center, zoom = 12, onMapClick, markerPosition, markers, className }: MapProps) => {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const [activeMarker, setActiveMarker] = React.useState<MapMarker | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey || '',
     libraries: ['places'],
   });
+
+  const handleMarkerClick = (marker: MapMarker) => {
+    setActiveMarker(marker);
+  };
 
   if (loadError || !apiKey) {
     return (
@@ -65,6 +79,24 @@ const Map = ({ center, zoom = 12, onMapClick, markerPosition, className }: MapPr
         }}
       >
         {markerPosition && <Marker position={markerPosition} />}
+        {markers && markers.map((marker, index) => (
+          <Marker
+            key={index}
+            position={marker}
+            title={marker.name}
+            onClick={() => handleMarkerClick(marker)}
+          />
+        ))}
+        {activeMarker && (
+          <InfoWindow
+            position={{ lat: activeMarker.lat, lng: activeMarker.lng }}
+            onCloseClick={() => setActiveMarker(null)}
+          >
+            <div>
+              <h4 className="font-bold">{activeMarker.name}</h4>
+            </div>
+          </InfoWindow>
+        )}
       </GoogleMap>
     </Card>
   );

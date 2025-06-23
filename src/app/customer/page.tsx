@@ -1,3 +1,6 @@
+
+'use client';
+
 import Image from "next/image";
 import Link from 'next/link';
 import {
@@ -5,27 +8,137 @@ import {
   CardContent,
   CardFooter,
   CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
+import { MapPin } from "lucide-react";
 import Map from "@/components/app/map";
+import { useState, useEffect } from "react";
+import { getAllHotels } from "@/lib/firebase/hotels";
+import type { Hotel } from "@/lib/types";
+import { getDistance } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const hotels: any[] = [];
+type HotelWithDistance = Hotel & { distance: number };
 
 export default function CustomerExplorePage() {
+  const [hotels, setHotels] = useState<HotelWithDistance[]>([]);
+  const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const sriLankaCenter = { lat: 7.8731, lng: 80.7718 };
+
+  useEffect(() => {
+    const fetchHotelsAndLocation = async () => {
+      setLoading(true);
+      setError(null);
+
+      // Fetch user location
+      const getLocation = new Promise<{ lat: number, lng: number }>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject("Geolocation is not supported by your browser.");
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              });
+            },
+            () => {
+              reject("Unable to retrieve your location. Showing hotels across Sri Lanka.");
+            }
+          );
+        }
+      });
+
+      try {
+        const location = await getLocation;
+        setUserLocation(location);
+      } catch (locationError: any) {
+        setError(locationError as string);
+        setUserLocation(sriLankaCenter); // Default to Sri Lanka center on error
+      }
+    };
+
+    fetchHotelsAndLocation();
+  }, []);
+
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const fetchAndSortHotels = async () => {
+        try {
+            const allHotels = await getAllHotels();
+            const hotelsWithDistance = allHotels.map(hotel => ({
+                ...hotel,
+                distance: getDistance(userLocation.lat, userLocation.lng, hotel.latitude, hotel.longitude)
+            })).sort((a, b) => a.distance - b.distance);
+
+            setHotels(hotelsWithDistance);
+        } catch (dbError) {
+            console.error("Error fetching hotels:", dbError);
+            setError("Could not fetch hotel data.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchAndSortHotels();
+
+  }, [userLocation]);
+
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-2 mb-8">
+          <Skeleton className="h-10 w-1/3" />
+          <Skeleton className="h-6 w-1/2" />
+        </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-3">
+                <Skeleton className="h-[500px] w-full" />
+            </div>
+            <div className="lg:col-span-3 mt-8">
+                <Skeleton className="h-8 w-1/4 mb-4" />
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    {[...Array(4)].map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader className="p-0"><Skeleton className="h-48 w-full" /></CardHeader>
+                            <CardContent className="p-4 space-y-2">
+                                <Skeleton className="h-4 w-3/4" />
+                                <Skeleton className="h-4 w-full" />
+                            </CardContent>
+                            <CardFooter className="p-4 pt-0"><Skeleton className="h-10 w-full" /></CardFooter>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="space-y-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Find Your Stay</h1>
         <p className="text-muted-foreground">
-          Explore hotels near you for room bookings and food orders.
+          {error ? error : "Explore hotels near you for room bookings and food orders."}
         </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-3">
-            <Map className="overflow-hidden h-[500px]" />
+            <Map 
+              className="overflow-hidden h-[500px]" 
+              center={userLocation || sriLankaCenter}
+              zoom={userLocation ? 13 : 8}
+              markers={hotels.map(h => ({ lat: h.latitude, lng: h.longitude, name: h.name }))}
+            />
         </div>
 
         <div className="lg:col-span-3 mt-8">
@@ -40,19 +153,17 @@ export default function CustomerExplorePage() {
                         <Link href={`/customer/hotels/${hotel.id}`}>
                             <CardHeader className="p-0">
                                 <div className="relative h-48 w-full">
-                                <Image src={hotel.imageUrl} data-ai-hint={hotel.aiHint} alt={`Hotel ${hotel.id}`} layout="fill" objectFit="cover" />
+                                <Image src={"https://placehold.co/600x400.png"} data-ai-hint="hotel exterior" alt={hotel.name} layout="fill" objectFit="cover" />
                                 </div>
                             </CardHeader>
                             <CardContent className="p-4">
                                 <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-1">
-                                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                                    <span className="font-semibold">{hotel.rating}</span>
+                                <CardTitle className="text-lg truncate">{hotel.name}</CardTitle>
+                                <Badge variant="secondary">{hotel.distance.toFixed(1)} km</Badge>
                                 </div>
-                                <Badge variant="secondary">{hotel.distance}</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                An exclusive hotel, identified as Hotel #{hotel.id}.
+                                <p className="flex items-center text-sm text-muted-foreground">
+                                  <MapPin className="w-4 h-4 mr-1 shrink-0" />
+                                  <span className="truncate">{hotel.address}</span>
                                 </p>
                             </CardContent>
                             <CardFooter className="p-4 pt-0">
