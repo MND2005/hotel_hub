@@ -53,6 +53,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.grandchancellor.lk',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
