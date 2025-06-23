@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from "next/link";
@@ -46,6 +45,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [nearestHotel, setNearestHotel] = useState<HotelWithDistance | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const sriLankaCenter = { lat: 7.8731, lng: 80.7718 };
 
@@ -102,6 +102,15 @@ export default function Home() {
     fetchHotelsAndLocation();
   }, []);
 
+  useEffect(() => {
+    if (nearestHotel?.imageUrls && nearestHotel.imageUrls.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % nearestHotel.imageUrls.length);
+      }, 2000); // 2 seconds
+      return () => clearInterval(interval);
+    }
+  }, [nearestHotel]);
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black">
         <Map
@@ -137,12 +146,13 @@ export default function Home() {
                             <div className="space-y-4">
                                 <div className="aspect-video w-full overflow-hidden rounded-lg border border-white/10">
                                     <Image 
-                                        src={nearestHotel.imageUrls?.[0] || 'https://placehold.co/600x400.png'}
+                                        src={nearestHotel.imageUrls?.[currentImageIndex] || 'https://placehold.co/600x400.png'}
                                         alt={nearestHotel.name}
                                         width={600}
                                         height={400}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover transition-opacity duration-1000 ease-in-out"
                                         data-ai-hint="hotel exterior"
+                                        key={currentImageIndex}
                                     />
                                 </div>
                                 <h3 className="text-3xl font-bold text-center drop-shadow-md">{nearestHotel.name}</h3>
