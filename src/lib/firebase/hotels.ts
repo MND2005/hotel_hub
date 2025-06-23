@@ -1,7 +1,7 @@
 
 import { db, auth } from '@/lib/firebase';
 import { firebaseNotConfiguredError } from './auth';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { Hotel } from '@/lib/types';
 
 export async function addHotel(hotelData: {
@@ -49,4 +49,24 @@ export async function getHotelsByOwner(ownerId: string): Promise<Hotel[]> {
         } as Hotel);
     });
     return hotels;
+}
+
+export async function getHotel(hotelId: string): Promise<Hotel | null> {
+    if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+    }
+    const hotelDocRef = doc(db, 'hotels', hotelId);
+    const hotelDoc = await getDoc(hotelDocRef);
+    if (hotelDoc.exists()) {
+        return { id: hotelDoc.id, ...hotelDoc.data() } as Hotel;
+    }
+    return null;
+}
+
+export async function updateHotel(hotelId: string, hotelData: Partial<Omit<Hotel, 'id' | 'ownerId'>>) {
+    if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+    }
+    const hotelDocRef = doc(db, 'hotels', hotelId);
+    await updateDoc(hotelDocRef, hotelData);
 }

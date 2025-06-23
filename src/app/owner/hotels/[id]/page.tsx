@@ -25,8 +25,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import Map from "@/components/app/map";
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { getHotel, updateHotel } from "@/lib/firebase/hotels";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const hotelDetailsSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -37,24 +40,13 @@ const hotelDetailsSchema = z.object({
   isOpen: z.boolean().default(true),
 });
 
-// In a real app, you would fetch this data
-const getHotelData = async (id: string) => {
-    console.log(`Fetching data for hotel ${id}...`);
-    // Mock data for now
-    return {
-        name: `Hotel #${id}`,
-        address: "123 Mock St, Colombo",
-        description: "A wonderful place to stay.",
-        latitude: 7.8731,
-        longitude: 80.7718,
-        isOpen: true,
-    }
-}
-
 export default function HotelDetailsPage() {
   const params = useParams();
+  const router = useRouter();
+  const { toast } = useToast();
   const hotelId = params.id as string;
   
+  const [loading, setLoading] = useState(true);
   const [markerPosition, setMarkerPosition] = useState<{lat: number, lng: number} | null>(null);
   const sriLankaCenter = { lat: 7.8731, lng: 80.7718 };
 
@@ -70,20 +62,53 @@ export default function HotelDetailsPage() {
     },
   });
 
+  const fetchHotelData = useCallback(async () => {
+    if (!hotelId) return;
+    setLoading(true);
+    try {
+      const data = await getHotel(hotelId);
+      if (data) {
+        form.reset(data);
+        setMarkerPosition({ lat: data.latitude, lng: data.longitude });
+      } else {
+        toast({
+            title: "Error",
+            description: "Hotel not found.",
+            variant: "destructive"
+        });
+        router.push('/owner/hotels');
+      }
+    } catch (error) {
+      console.error("Failed to fetch hotel details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch hotel details. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+        setLoading(false);
+    }
+  }, [hotelId, form, toast, router]);
+
   useEffect(() => {
-    if (hotelId) {
-        getHotelData(hotelId).then(data => {
-            if (data) {
-                form.reset(data);
-                setMarkerPosition({ lat: data.latitude, lng: data.longitude });
-            }
+    fetchHotelData();
+  }, [fetchHotelData]);
+
+  async function onSubmit(values: z.infer<typeof hotelDetailsSchema>) {
+    try {
+        await updateHotel(hotelId, values);
+        toast({
+            title: "Success",
+            description: "Hotel details updated successfully."
+        });
+    } catch (error) {
+        console.error("Failed to update hotel:", error);
+        toast({
+            title: "Error",
+            description: "Failed to update hotel. Please try again.",
+            variant: "destructive"
         });
     }
-  }, [hotelId, form]);
-
-  function onSubmit(values: z.infer<typeof hotelDetailsSchema>) {
-    console.log("Updating Hotel Data:", values);
-    // Here you would typically call a function to update the data in your database
   }
   
   const handleMapClick = (e: any) => {
@@ -93,6 +118,33 @@ export default function HotelDetailsPage() {
     form.setValue("latitude", lat, { shouldValidate: true });
     form.setValue("longitude", lng, { shouldValidate: true });
   };
+  
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-64 mt-2" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                    <div>
+                        <Skeleton className="h-64 w-full" />
+                    </div>
+                </div>
+                 <Skeleton className="h-20 w-full" />
+            </CardContent>
+            <CardFooter>
+                 <Skeleton className="h-10 w-32" />
+            </CardFooter>
+        </Card>
+    )
+  }
 
   return (
     <Form {...form}>
@@ -191,7 +243,9 @@ export default function HotelDetailsPage() {
             />
             </CardContent>
             <CardFooter>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
             </CardFooter>
         </Card>
       </form>
