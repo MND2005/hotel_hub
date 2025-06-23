@@ -136,8 +136,13 @@ export default function CustomerExplorePage() {
             <Map 
               className="overflow-hidden h-[500px]" 
               center={userLocation || sriLankaCenter}
-              zoom={userLocation ? 13 : 8}
-              markers={hotels.map(h => ({ lat: h.latitude, lng: h.longitude, name: h.name }))}
+              zoom={userLocation && !error ? 13 : 8}
+              markers={[
+                ...(userLocation && !error
+                  ? [{ lat: userLocation.lat, lng: userLocation.lng, name: 'Your Location' }]
+                  : []),
+                ...hotels.map(h => ({ lat: h.latitude, lng: h.longitude, name: h.name })),
+              ]}
             />
         </div>
 
