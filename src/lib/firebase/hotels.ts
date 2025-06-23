@@ -11,6 +11,7 @@ export async function addHotel(hotelData: {
     latitude: number;
     longitude: number;
     isOpen: boolean;
+    imageUrls: string[];
 }) {
     if (!auth?.currentUser || !db) {
         throw new Error(firebaseNotConfiguredError);
@@ -46,6 +47,7 @@ export async function getHotelsByOwner(ownerId: string): Promise<Hotel[]> {
             latitude: data.latitude,
             longitude: data.longitude,
             isOpen: data.isOpen,
+            imageUrls: data.imageUrls || [],
         } as Hotel);
     });
     return hotels;
@@ -58,7 +60,12 @@ export async function getHotel(hotelId: string): Promise<Hotel | null> {
     const hotelDocRef = doc(db, 'hotels', hotelId);
     const hotelDoc = await getDoc(hotelDocRef);
     if (hotelDoc.exists()) {
-        return { id: hotelDoc.id, ...hotelDoc.data() } as Hotel;
+        const data = hotelDoc.data();
+        return { 
+            id: hotelDoc.id, 
+            ...data,
+            imageUrls: data.imageUrls || [],
+        } as Hotel;
     }
     return null;
 }
@@ -81,7 +88,12 @@ export async function getAllHotels(): Promise<Hotel[]> {
     
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
-        hotels.push({ id: doc.id, ...doc.data() } as Hotel);
+        const data = doc.data();
+        hotels.push({ 
+            id: doc.id, 
+            ...data,
+            imageUrls: data.imageUrls || [],
+        } as Hotel);
     });
     return hotels;
 }

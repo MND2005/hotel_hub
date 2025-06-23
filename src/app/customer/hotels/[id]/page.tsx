@@ -22,19 +22,16 @@ import type { Hotel, Room, MenuItem } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
-const placeholderImages = [
-    { src: "https://placehold.co/800x600.png", alt: "Hotel Main Image", aiHint: "hotel exterior" },
-    { src: "https://placehold.co/400x300.png", alt: "Hotel Image 2", aiHint: "hotel room" },
-    { src: "https://placehold.co/400x300.png", alt: "Hotel Image 3", aiHint: "hotel amenity" },
-];
-
 const HotelDetailSkeleton = () => (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8 max-h-[500px]">
-        <div className="col-span-2 row-span-2"><Skeleton className="w-full h-full min-h-[300px]" /></div>
-        <Skeleton className="w-full h-full min-h-[146px]" />
-        <Skeleton className="w-full h-full min-h-[146px]" />
+      <div className="grid md:grid-cols-2 gap-2 mb-8 h-[300px] md:h-[500px]">
+        <Skeleton className="w-full h-full" />
+        <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="w-full h-full" />
+            <Skeleton className="w-full h-full" />
+            <Skeleton className="w-full h-full" />
+            <Skeleton className="w-full h-full" />
+        </div>
       </div>
        <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
@@ -147,13 +144,15 @@ export default function HotelDetailPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8 max-h-[500px]">
-        <div className="col-span-2 row-span-2">
-            <Image src={placeholderImages[0].src} data-ai-hint={placeholderImages[0].aiHint} alt={placeholderImages[0].alt} width={800} height={600} className="rounded-lg object-cover w-full h-full"/>
+        <div className="grid md:grid-cols-2 gap-2 mb-8">
+            <Image src={hotel.imageUrls?.[0] || "https://placehold.co/800x600.png"} data-ai-hint="hotel exterior" alt={hotel.name} width={800} height={600} className="rounded-lg object-cover w-full h-full aspect-video md:aspect-auto"/>
+            <div className="grid grid-cols-2 gap-2">
+                <Image src={hotel.imageUrls?.[1] || "https://placehold.co/400x300.png"} data-ai-hint="hotel amenity" alt={`${hotel.name} view 2`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
+                <Image src={hotel.imageUrls?.[2] || "https://placehold.co/400x300.png"} data-ai-hint="hotel amenity" alt={`${hotel.name} view 3`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
+                <Image src={hotel.imageUrls?.[3] || "https://placehold.co/400x300.png"} data-ai-hint="hotel room" alt={`${hotel.name} view 4`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
+                <Image src={hotel.imageUrls?.[4] || "https://placehold.co/400x300.png"} data-ai-hint="hotel food" alt={`${hotel.name} view 5`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
+            </div>
         </div>
-        <Image src={placeholderImages[1].src} data-ai-hint={placeholderImages[1].aiHint} alt={placeholderImages[1].alt} width={400} height={300} className="rounded-lg object-cover w-full h-full"/>
-        <Image src={placeholderImages[2].src} data-ai-hint={placeholderImages[2].aiHint} alt={placeholderImages[2].alt} width={400} height={300} className="rounded-lg object-cover w-full h-full"/>
-      </div>
       
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -181,7 +180,7 @@ export default function HotelDetailPage() {
                     ) : rooms.map(room => (
                         <Card key={room.id} className="flex flex-col md:flex-row items-center">
                             <div className="relative w-full md:w-48 h-48 md:h-full">
-                               <Image src={room.imageUrl} data-ai-hint={room.aiHint} alt={room.type} fill className="object-cover rounded-l-lg" />
+                               <Image src={room.imageUrl} data-ai-hint={room.aiHint} alt={room.type} fill className="object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none" />
                             </div>
                             <CardHeader className="flex-1">
                                 <CardTitle>{room.type}</CardTitle>
@@ -204,10 +203,15 @@ export default function HotelDetailPage() {
                       <p className="text-muted-foreground">The menu is currently unavailable.</p>
                     ) : menu.map(item => (
                         <div key={item.id} className="flex justify-between items-center">
-                            <div>
-                                <h4 className="font-semibold">{item.name}</h4>
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                <p className="font-bold text-primary mt-1">${item.price.toFixed(2)}</p>
+                             <div className="flex items-center gap-4">
+                                {item.imageUrl && (
+                                    <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
+                                )}
+                                <div>
+                                    <h4 className="font-semibold">{item.name}</h4>
+                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                    <p className="font-bold text-primary mt-1">${item.price.toFixed(2)}</p>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>

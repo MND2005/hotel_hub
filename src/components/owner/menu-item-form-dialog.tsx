@@ -37,6 +37,7 @@ const menuItemSchema = z.object({
   category: z.enum(["breakfast", "lunch", "dinner"], {
     required_error: "You need to select a menu category.",
   }),
+  imageUrl: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
 });
 
 type MenuItemFormDialogProps = {
@@ -63,6 +64,7 @@ export function MenuItemFormDialog({ isOpen, setIsOpen, hotelId, menuItem, onSav
         name: "",
         description: "",
         price: 0,
+        imageUrl: "",
       });
     }
   }, [menuItem, form]);
@@ -73,6 +75,8 @@ export function MenuItemFormDialog({ isOpen, setIsOpen, hotelId, menuItem, onSav
         ...values,
         hotelId,
         description: values.description || '',
+        imageUrl: values.imageUrl || '',
+        aiHint: 'food plate',
       };
 
       if (isEditMode) {
@@ -162,6 +166,22 @@ export function MenuItemFormDialog({ isOpen, setIsOpen, hotelId, menuItem, onSav
                       <SelectItem value="dinner">Dinner</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com/image.png" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    (Optional) A direct link to an image of the food item.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

@@ -20,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ const hotelDetailsSchema = z.object({
   latitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   longitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   isOpen: z.boolean().default(true),
+  imageUrls: z.array(z.string().url("Please enter a valid URL.").or(z.literal(''))).min(5).max(5),
 });
 
 export default function HotelDetailsPage() {
@@ -59,6 +61,7 @@ export default function HotelDetailsPage() {
       latitude: 0,
       longitude: 0,
       isOpen: true,
+      imageUrls: ["", "", "", "", ""],
     },
   });
 
@@ -68,7 +71,11 @@ export default function HotelDetailsPage() {
     try {
       const data = await getHotel(hotelId);
       if (data) {
-        form.reset(data);
+        const paddedImageUrls = [...(data.imageUrls || [])];
+        while (paddedImageUrls.length < 5) {
+            paddedImageUrls.push('');
+        }
+        form.reset({ ...data, imageUrls: paddedImageUrls });
         setMarkerPosition({ lat: data.latitude, lng: data.longitude });
       } else {
         toast({
@@ -96,7 +103,11 @@ export default function HotelDetailsPage() {
 
   async function onSubmit(values: z.infer<typeof hotelDetailsSchema>) {
     try {
-        await updateHotel(hotelId, values);
+        const payload = {
+          ...values,
+          imageUrls: values.imageUrls.filter(url => url.trim() !== '')
+        };
+        await updateHotel(hotelId, payload);
         toast({
             title: "Success",
             description: "Hotel details updated successfully."
@@ -219,6 +230,26 @@ export default function HotelDetailsPage() {
                         )}
                     />
                 </div>
+            </div>
+
+            <div className="space-y-2">
+                <FormLabel>Hotel Images</FormLabel>
+                <FormDescription>Add up to 5 image URLs for your hotel gallery.</FormDescription>
+                {Array.from({ length: 5 }).map((_, index) => (
+                <FormField
+                    key={index}
+                    control={form.control}
+                    name={`imageUrls.${index}` as const}
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormControl>
+                        <Input placeholder={`Image URL ${index + 1}`} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                ))}
             </div>
 
             <FormField

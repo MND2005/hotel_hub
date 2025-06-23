@@ -16,10 +16,11 @@ export type Hotel = {
   latitude: number;
   longitude: number;
   isOpen: boolean;
+  imageUrls: string[];
 };
 
 export type Room = {
-  id: string;
+  id:string;
   hotelId: string;
   type: string;
   price: number;
@@ -36,6 +37,8 @@ export type MenuItem = {
   name: string;
   description: string;
   price: number;
+  imageUrl?: string;
+  aiHint?: string;
 };
 
 export type Order = {
