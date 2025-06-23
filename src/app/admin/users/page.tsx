@@ -31,24 +31,36 @@ import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import type { User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const usersData = await getAllUsers();
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Failed to fetch users", error);
-      } finally {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const fetchData = async () => {
+          try {
+            const usersData = await getAllUsers();
+            setUsers(usersData);
+          } catch (error) {
+            console.error("Failed to fetch users", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+        fetchData();
+      } else {
         setLoading(false);
+        router.push('/login');
       }
-    };
-    fetchData();
-  }, []);
+    });
+    return () => unsubscribe();
+  }, [router]);
 
   if (loading) {
     return (

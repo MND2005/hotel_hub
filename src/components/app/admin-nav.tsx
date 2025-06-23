@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Hotel, Users, DollarSign, LogOut } from 'lucide-react';
 import {
   SidebarMenu,
@@ -9,6 +10,8 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { signOut } from '@/lib/firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const links = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
@@ -19,6 +22,22 @@ const links = [
 
 export function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout failed", error);
+      toast({
+        title: "Logout Failed",
+        description: "An unexpected error occurred during logout.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <>
@@ -41,12 +60,10 @@ export function AdminNav() {
       <div className="mt-auto">
         <SidebarMenu>
           <SidebarMenuItem>
-             <Link href="/">
-                <SidebarMenuButton className="w-full justify-start">
-                    <LogOut className="h-5 w-5 mr-3" />
-                    <span>Logout</span>
-                </SidebarMenuButton>
-             </Link>
+            <SidebarMenuButton onClick={handleLogout} className="w-full justify-start">
+                <LogOut className="h-5 w-5 mr-3" />
+                <span>Logout</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </div>

@@ -22,29 +22,41 @@ import { WithdrawalClient } from "./client";
 import { useState, useEffect } from "react";
 import type { Withdrawal, User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 export default function WithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [withdrawalsData, usersData] = await Promise.all([
-          getAllWithdrawals(),
-          getAllUsers(),
-        ]);
-        setWithdrawals(withdrawalsData);
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Failed to fetch withdrawals and users", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if(user) {
+            const fetchData = async () => {
+                try {
+                    const [withdrawalsData, usersData] = await Promise.all([
+                    getAllWithdrawals(),
+                    getAllUsers(),
+                    ]);
+                    setWithdrawals(withdrawalsData);
+                    setUsers(usersData);
+                } catch (error) {
+                    console.error("Failed to fetch withdrawals and users", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchData();
+        } else {
+            setLoading(false);
+            router.push('/login');
+        }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
 
   const userMap = new Map(users.map((user) => [user.id, user.name]));

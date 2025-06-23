@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
   User as FirebaseAuthUser,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -41,4 +42,11 @@ export async function signIn(email: string, password: string): Promise<FirebaseA
   }
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   return userCredential.user;
+}
+
+export async function signOut(): Promise<void> {
+  if (!auth) {
+    throw new Error(firebaseNotConfiguredError);
+  }
+  return firebaseSignOut(auth);
 }

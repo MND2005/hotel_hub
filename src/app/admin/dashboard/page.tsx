@@ -24,32 +24,45 @@ import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect } from "react";
 import type { User, Hotel as HotelType, Withdrawal } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [hotels, setHotels] = useState<HotelType[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [usersData, hotelsData, withdrawalsData] = await Promise.all([
-          getAllUsers(),
-          getAllHotelsForAdmin(),
-          getAllWithdrawals(),
-        ]);
-        setUsers(usersData);
-        setHotels(hotelsData);
-        setWithdrawals(withdrawalsData);
-      } catch (error) {
-        console.error("Failed to fetch admin data", error);
-      } finally {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const fetchData = async () => {
+          try {
+            const [usersData, hotelsData, withdrawalsData] = await Promise.all([
+              getAllUsers(),
+              getAllHotelsForAdmin(),
+              getAllWithdrawals(),
+            ]);
+            setUsers(usersData);
+            setHotels(hotelsData);
+            setWithdrawals(withdrawalsData);
+          } catch (error) {
+            console.error("Failed to fetch admin data", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+        fetchData();
+      } else {
         setLoading(false);
+        router.push('/login');
       }
-    };
-    fetchData();
-  }, []);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const stats = [
     { title: "Total Users", value: users.length.toString(), icon: Users },

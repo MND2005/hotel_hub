@@ -35,6 +35,8 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { toggleHotelStatus } from "./actions";
 import { HotelPreviewDialog } from "@/components/app/hotel-preview-dialog";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function HotelsPage() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -48,27 +50,35 @@ export default function HotelsPage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [hotelsData, usersData] = await Promise.all([
-          getAllHotelsForAdmin(),
-          getAllUsers(),
-        ]);
-        setHotels(hotelsData);
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Failed to fetch hotels and users", error);
-        toast({
-          title: "Error",
-          description: "Failed to load hotel data.",
-          variant: "destructive",
-        });
-      } finally {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const fetchData = async () => {
+          try {
+            const [hotelsData, usersData] = await Promise.all([
+              getAllHotelsForAdmin(),
+              getAllUsers(),
+            ]);
+            setHotels(hotelsData);
+            setUsers(usersData);
+          } catch (error) {
+            console.error("Failed to fetch hotels and users", error);
+            toast({
+              title: "Error",
+              description: "Failed to load hotel data.",
+              variant: "destructive",
+            });
+          } finally {
+            setLoading(false);
+          }
+        };
+        fetchData();
+      } else {
         setLoading(false);
+        router.push('/login');
       }
-    };
-    fetchData();
-  }, [toast]);
+    });
+    return () => unsubscribe();
+  }, [router, toast]);
 
   const handleToggle = (hotelId: string, currentStatus: boolean) => {
     startTransition(async () => {

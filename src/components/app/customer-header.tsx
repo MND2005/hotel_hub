@@ -1,11 +1,14 @@
+
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, User, Map, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { signOut } from '@/lib/firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const navLinks = [
   { href: '/customer', label: 'Explore', icon: Map },
@@ -15,6 +18,22 @@ const navLinks = [
 
 export function CustomerHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout failed", error);
+      toast({
+        title: "Logout Failed",
+        description: "An unexpected error occurred during logout.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -72,8 +91,8 @@ export function CustomerHeader() {
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
-            <Button asChild variant="secondary">
-                <Link href="/">Logout</Link>
+            <Button onClick={handleLogout} variant="secondary">
+                Logout
             </Button>
         </div>
       </div>

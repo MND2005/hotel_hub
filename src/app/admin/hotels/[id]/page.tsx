@@ -36,6 +36,7 @@ import { uploadImage } from "@/lib/firebase/storage";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { onAuthStateChanged } from "firebase/auth";
 
 // Using the same schema as the owner page, as the details are the same.
 const hotelDetailsSchema = z.object({
@@ -105,8 +106,15 @@ export default function AdminEditHotelPage() {
   }, [hotelId, form, toast, router]);
 
   useEffect(() => {
-    fetchHotelData();
-  }, [fetchHotelData]);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        fetchHotelData();
+      } else {
+        router.push('/login');
+      }
+    });
+    return () => unsubscribe();
+  }, [fetchHotelData, router]);
 
   async function onSubmit(values: z.infer<typeof hotelDetailsSchema>) {
     if (!auth.currentUser) {
