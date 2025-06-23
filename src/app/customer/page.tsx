@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
+import Map from "@/components/app/map";
 
 const hotels = [
   { id: '1', rating: 4.5, distance: '0.5 miles', imageUrl: 'https://placehold.co/600x400.png', aiHint: 'boutique hotel exterior' },
@@ -29,11 +30,7 @@ export default function CustomerExplorePage() {
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-3">
-            <Card className="overflow-hidden h-[500px]">
-                <div className="relative w-full h-full">
-                <Image src="https://placehold.co/1200x600.png" data-ai-hint="world map" alt="Map" layout="fill" objectFit="cover" />
-                </div>
-            </Card>
+            <Map className="overflow-hidden h-[500px]" />
         </div>
 
         <div className="lg:col-span-3 mt-8">

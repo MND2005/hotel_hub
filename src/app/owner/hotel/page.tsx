@@ -15,7 +15,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -25,19 +24,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import Image from "next/image";
+import Map from "@/components/app/map";
 
 const hotelDetailsSchema = z.object({
-  address: z.string().min(10, "Address must be at least 10 characters long."),
-  description: z.string().min(20, "Description must be at least 20 characters long."),
+  address: z.string().min(1, "Address is required."),
+  description: z.string().min(1, "Description is required."),
 });
 
 export default function HotelPage() {
   const form = useForm<z.infer<typeof hotelDetailsSchema>>({
     resolver: zodResolver(hotelDetailsSchema),
     defaultValues: {
-      address: "123 Enchanted Way, Magical Kingdom, Fantasyland 12345",
-      description: "A cozy and charming establishment located in the heart of a vibrant city, offering a unique blend of comfort and local culture. Perfect for travelers seeking an authentic experience."
+      address: "",
+      description: "",
     },
   });
 
@@ -104,22 +103,13 @@ export default function HotelPage() {
       <div className="lg:col-span-2">
         <Card>
           <CardHeader>
-            <CardTitle>Location</CardTitle>
-            <CardDescription>Pin your hotel's location on the map.</CardDescription>
+            <CardTitle>Location Preview</CardTitle>
+            <CardDescription>
+              A preview of your hotel's location.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative w-full h-96 rounded-lg overflow-hidden border">
-               <Image
-                  src="https://placehold.co/800x600.png"
-                  alt="Map placeholder"
-                  data-ai-hint="city map"
-                  layout="fill"
-                  objectFit="cover"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <Button>Choose Location on Map</Button>
-                </div>
-            </div>
+             <Map className="relative w-full h-96 rounded-lg overflow-hidden border" />
           </CardContent>
         </Card>
       </div>
