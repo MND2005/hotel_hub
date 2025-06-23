@@ -17,7 +17,7 @@ import { Star, MapPin, Users, BedDouble, Plus, Minus } from "lucide-react";
 import { getHotel } from "@/lib/firebase/hotels";
 import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import type { Hotel, Room, MenuItem } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,8 +58,11 @@ const HotelDetailSkeleton = () => (
 )
 
 
-export default function HotelDetailPage({ params }: { params: { id: string } }) {
+export default function HotelDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const hotelId = params.id as string;
+
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -71,13 +74,13 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
 
   useEffect(() => {
     const fetchData = async () => {
-        if (!params.id) return;
+        if (!hotelId) return;
         setLoading(true);
         try {
             const [hotelData, roomsData, menuData] = await Promise.all([
-                getHotel(params.id),
-                getRoomsByHotel(params.id),
-                getMenuItemsByHotel(params.id)
+                getHotel(hotelId),
+                getRoomsByHotel(hotelId),
+                getMenuItemsByHotel(hotelId)
             ]);
 
             if (!hotelData) {
@@ -96,7 +99,7 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
         }
     };
     fetchData();
-  }, [params.id, router]);
+  }, [hotelId, router]);
 
   const handleBookRoom = (room: Room) => {
     setBookedRoom(prevRoom => prevRoom?.id === room.id ? null : room);
