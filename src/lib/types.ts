@@ -45,11 +45,12 @@ export type Order = {
   id: string;
   customerId: string;
   hotelId: string;
-  type: 'room' | 'food';
-  items: { name: string; quantity: number }[];
+  type: 'room' | 'food' | 'combined';
+  items: { name: string; quantity: number, price: number }[];
   total: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   orderDate: string;
+  stripeCheckoutSessionId?: string;
 };
 
 export type Withdrawal = {

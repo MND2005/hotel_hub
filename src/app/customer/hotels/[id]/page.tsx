@@ -17,11 +17,16 @@ import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
 import { useRouter, useParams } from 'next/navigation';
 import type { Hotel, Room, MenuItem } from "@/lib/types";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useTransition } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageGallery } from "@/components/app/image-gallery";
 import Image from "next/image";
 import { HotelCardImage } from "@/components/app/hotel-card-image";
+import { loadStripe } from '@stripe/stripe-js';
+import { createCheckoutSession } from './actions';
+import { useToast } from "@/hooks/use-toast";
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const HotelDetailSkeleton = () => (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -61,11 +66,13 @@ export default function HotelDetailPage() {
   const router = useRouter();
   const params = useParams();
   const hotelId = params.id as string;
+  const { toast } = useToast();
 
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
 
   // Cart state
   const [bookedRoom, setBookedRoom] = useState<Room | null>(null);
@@ -92,7 +99,6 @@ export default function HotelDetailPage() {
             setMenu(menuData);
         } catch (error) {
             console.error("Failed to fetch hotel details", error);
-            // Optionally show a toast error
         } finally {
             setLoading(false);
         }
@@ -130,12 +136,37 @@ export default function HotelDetailPage() {
     return roomPrice + foodPrice;
   }, [bookedRoom, foodOrder]);
 
+  const handleCheckout = () => {
+    startTransition(async () => {
+        try {
+            const { sessionId } = await createCheckoutSession(hotelId, bookedRoom, foodOrder);
+            const stripe = await stripePromise;
+            if (!stripe) throw new Error('Stripe.js has not loaded yet.');
+            
+            const { error } = await stripe.redirectToCheckout({ sessionId });
+            if (error) {
+                toast({
+                    title: "Checkout Error",
+                    description: error.message || "An unexpected error occurred during checkout.",
+                    variant: "destructive"
+                });
+            }
+
+        } catch (error: any) {
+            toast({
+                title: "Checkout Failed",
+                description: error.message || "Failed to create a checkout session. Please try again.",
+                variant: "destructive"
+            });
+        }
+    });
+  }
+
   if (loading) {
     return <HotelDetailSkeleton />;
   }
 
   if (!hotel) {
-    // This case should be handled by the redirect in useEffect, but as a fallback:
     return (
         <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-2xl font-bold">Hotel not found.</h1>
@@ -264,7 +295,9 @@ export default function HotelDetailPage() {
                    )}
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" disabled={total === 0}>Checkout</Button>
+                    <Button className="w-full" disabled={total === 0 || isPending} onClick={handleCheckout}>
+                        {isPending ? 'Processing...' : 'Checkout'}
+                    </Button>
                 </CardFooter>
             </Card>
         </div>
