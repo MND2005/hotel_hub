@@ -28,14 +28,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getAllHotelsForAdmin } from "@/lib/firebase/hotels";
 import { getAllUsers } from "@/lib/firebase/users";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import type { Hotel, User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { toggleHotelStatus } from "./actions";
 
 export default function HotelsPage() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,12 +54,41 @@ export default function HotelsPage() {
         setUsers(usersData);
       } catch (error) {
         console.error("Failed to fetch hotels and users", error);
+        toast({
+          title: "Error",
+          description: "Failed to load hotel data.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [toast]);
+
+  const handleToggle = (hotelId: string, currentStatus: boolean) => {
+    startTransition(async () => {
+      const result = await toggleHotelStatus(hotelId, currentStatus);
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: `Hotel status has been updated.`,
+        });
+        // Optimistically update UI
+        setHotels(currentHotels =>
+          currentHotels.map(h =>
+            h.id === hotelId ? { ...h, isOpen: !currentStatus } : h
+          )
+        );
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to update status.',
+          variant: 'destructive',
+        });
+      }
+    });
+  };
 
   const userMap = new Map(users.map((user) => [user.id, user.name]));
 
@@ -143,6 +178,7 @@ export default function HotelsPage() {
                           aria-haspopup="true"
                           size="icon"
                           variant="ghost"
+                          disabled={isPending}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Toggle menu</span>
@@ -150,10 +186,18 @@ export default function HotelsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          Deactivate
+                        <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/customer/hotels/${hotel.id}`)}>
+                            View as Customer
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled={isPending} onClick={() => router.push(`/owner/hotels/${hotel.id}`)}>
+                            Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={isPending}
+                          onClick={() => handleToggle(hotel.id, hotel.isOpen)}
+                          className={hotel.isOpen ? "text-destructive" : ""}
+                        >
+                          {hotel.isOpen ? 'Deactivate' : 'Activate'}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
