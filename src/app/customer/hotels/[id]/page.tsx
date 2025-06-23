@@ -1,7 +1,5 @@
-
 'use client';
 
-import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -21,16 +19,19 @@ import { useRouter, useParams } from 'next/navigation';
 import type { Hotel, Room, MenuItem } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageGallery } from "@/components/app/image-gallery";
+import Image from "next/image";
 
 const HotelDetailSkeleton = () => (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="grid md:grid-cols-2 gap-2 mb-8 h-[300px] md:h-[500px]">
-        <Skeleton className="w-full h-full" />
-        <div className="grid grid-cols-2 gap-2">
-            <Skeleton className="w-full h-full" />
-            <Skeleton className="w-full h-full" />
-            <Skeleton className="w-full h-full" />
-            <Skeleton className="w-full h-full" />
+       <div className="space-y-2 mb-8">
+        <Skeleton className="w-full aspect-[16/10]" />
+        <div className="hidden md:grid grid-cols-5 gap-2">
+            <Skeleton className="w-full aspect-video" />
+            <Skeleton className="w-full aspect-video" />
+            <Skeleton className="w-full aspect-video" />
+            <Skeleton className="w-full aspect-video" />
+            <Skeleton className="w-full aspect-video" />
         </div>
       </div>
        <div className="grid gap-8 lg:grid-cols-3">
@@ -144,14 +145,8 @@ export default function HotelDetailPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-2 gap-2 mb-8">
-            <Image src={hotel.imageUrls?.[0] || "https://placehold.co/800x600.png"} data-ai-hint="hotel exterior" alt={hotel.name} width={800} height={600} className="rounded-lg object-cover w-full h-full aspect-video md:aspect-auto"/>
-            <div className="grid grid-cols-2 gap-2">
-                <Image src={hotel.imageUrls?.[1] || "https://placehold.co/400x300.png"} data-ai-hint="hotel amenity" alt={`${hotel.name} view 2`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
-                <Image src={hotel.imageUrls?.[2] || "https://placehold.co/400x300.png"} data-ai-hint="hotel amenity" alt={`${hotel.name} view 3`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
-                <Image src={hotel.imageUrls?.[3] || "https://placehold.co/400x300.png"} data-ai-hint="hotel room" alt={`${hotel.name} view 4`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
-                <Image src={hotel.imageUrls?.[4] || "https://placehold.co/400x300.png"} data-ai-hint="hotel food" alt={`${hotel.name} view 5`} width={400} height={300} className="rounded-lg object-cover w-full h-full aspect-square"/>
-            </div>
+        <div className="mb-8">
+            <ImageGallery imageUrls={hotel.imageUrls} alt={hotel.name} />
         </div>
       
       <div className="grid gap-8 lg:grid-cols-3">

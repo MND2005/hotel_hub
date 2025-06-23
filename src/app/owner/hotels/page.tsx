@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Hotel, MapPin } from "lucide-react";
-import Image from "next/image";
 import { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
 import { getHotelsByOwner } from '@/lib/firebase/hotels';
 import type { Hotel as HotelType } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
 import { onAuthStateChanged } from "firebase/auth";
+import { HotelCardImage } from "@/components/app/hotel-card-image";
 
 export default function OwnerHotelsPage() {
   const [hotels, setHotels] = useState<HotelType[]>([]);
@@ -120,8 +120,8 @@ export default function OwnerHotelsPage() {
           {hotels.map((hotel) => (
             <Card key={hotel.id} className="overflow-hidden transition-all hover:shadow-lg">
               <Link href={`/owner/hotels/${hotel.id}`}>
-                <CardHeader className="p-0 relative h-48 w-full">
-                    <Image src={hotel.imageUrls?.[0] || "https://placehold.co/600x400.png"} data-ai-hint="hotel exterior" alt={hotel.name} layout="fill" objectFit="cover" />
+                <CardHeader className="p-0">
+                    <HotelCardImage imageUrls={hotel.imageUrls} alt={hotel.name} />
                 </CardHeader>
                 <CardContent className="p-4">
                     <CardTitle className="mb-2 truncate">{hotel.name}</CardTitle>

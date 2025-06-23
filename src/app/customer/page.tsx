@@ -1,7 +1,6 @@
 
 'use client';
 
-import Image from "next/image";
 import Link from 'next/link';
 import {
   Card,
@@ -19,6 +18,7 @@ import { getAllHotels } from "@/lib/firebase/hotels";
 import type { Hotel } from "@/lib/types";
 import { getDistance } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HotelCardImage } from '@/components/app/hotel-card-image';
 
 type HotelWithDistance = Hotel & { distance: number };
 
@@ -157,9 +157,7 @@ export default function CustomerExplorePage() {
                     <Card key={hotel.id} className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
                         <Link href={`/customer/hotels/${hotel.id}`}>
                             <CardHeader className="p-0">
-                                <div className="relative h-48 w-full">
-                                <Image src={hotel.imageUrls?.[0] || "https://placehold.co/600x400.png"} data-ai-hint="hotel exterior" alt={hotel.name} layout="fill" objectFit="cover" />
-                                </div>
+                                <HotelCardImage imageUrls={hotel.imageUrls} alt={hotel.name} />
                             </CardHeader>
                             <CardContent className="p-4">
                                 <div className="flex justify-between items-center mb-2">
