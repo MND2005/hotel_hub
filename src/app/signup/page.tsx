@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signUp } from "@/lib/firebase/auth";
+import { signUp, firebaseNotConfiguredError } from "@/lib/firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
 const signupSchema = z.object({
@@ -58,7 +58,9 @@ export default function SignupPage() {
     } catch (error: any) {
       console.error("Signup failed", error);
       let description = "An unexpected error occurred. Please try again.";
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.message === firebaseNotConfiguredError || error?.code === 'auth/invalid-api-key') {
+        description = firebaseNotConfiguredError;
+      } else if (error.code === 'auth/email-already-in-use') {
         description = "This email address is already in use by another account.";
       } else if (error.code === 'auth/configuration-not-found') {
         description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";

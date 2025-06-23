@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "@/lib/firebase/auth";
+import { signIn, firebaseNotConfiguredError } from "@/lib/firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -49,6 +49,10 @@ export default function LoginPage() {
     try {
       const user = await signIn(values.email, values.password);
       
+      if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+      }
+
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
@@ -74,7 +78,9 @@ export default function LoginPage() {
       console.error("Login failed", error);
       let description = "An unexpected error occurred. Please try again.";
 
-      if (error?.code === 'auth/invalid-credential') {
+      if (error.message === firebaseNotConfiguredError || error?.code === 'auth/invalid-api-key') {
+        description = firebaseNotConfiguredError;
+      } else if (error?.code === 'auth/invalid-credential') {
         description = "Invalid email or password. Please try again.";
       } else if (error?.code === 'auth/configuration-not-found') {
         description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";
