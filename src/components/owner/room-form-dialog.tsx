@@ -28,14 +28,17 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/lib/types";
 import { addRoom, updateRoom } from "@/lib/firebase/rooms";
+import { ImageUploader } from "@/components/app/image-uploader";
+import { auth } from "@/lib/firebase";
+import { uploadImage } from "@/lib/firebase/storage";
 
 const roomSchema = z.object({
   type: z.string().min(1, "Room type is required."),
   price: z.coerce.number().positive("Price must be a positive number."),
   capacity: z.coerce.number().int().positive("Capacity must be a positive integer."),
   isAvailable: z.boolean().default(true),
-  imageUrls: z.array(z.string().url("Please enter a valid URL.").or(z.literal(''))).max(2).refine(
-    (urls) => urls.some(url => url.trim() !== ''), { message: "At least one image URL is required."}
+  imageUrls: z.array(z.any()).max(2, "You can upload a maximum of 2 images.").refine(
+    (urls) => urls.filter(Boolean).length > 0, { message: "At least one image is required."}
   ),
 });
 
@@ -58,33 +61,45 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
       price: 0,
       capacity: 1,
       isAvailable: true,
-      imageUrls: ["", ""],
+      imageUrls: [],
     },
   });
 
   useEffect(() => {
-    if (isOpen && isEditMode && room) {
-        const paddedImageUrls = [...(room.imageUrls || [])];
-        while (paddedImageUrls.length < 2) {
-            paddedImageUrls.push('');
-        }
-        form.reset({ ...room, imageUrls: paddedImageUrls });
-    } else if (isOpen && !isEditMode) {
+    if (isOpen) {
+      if (isEditMode && room) {
+        form.reset({ ...room, imageUrls: room.imageUrls || [] });
+      } else {
         form.reset({
             type: "",
             price: 0,
             capacity: 1,
             isAvailable: true,
-            imageUrls: ["", ""],
+            imageUrls: [],
         });
+      }
     }
   }, [isOpen, isEditMode, room, form]);
 
   async function onSubmit(values: z.infer<typeof roomSchema>) {
+    if (!auth.currentUser) {
+        toast({ title: "Authentication Error", description: "You are not logged in.", variant: "destructive" });
+        return;
+    }
     try {
+      const existingUrls = values.imageUrls.filter((item): item is string => typeof item === 'string');
+      const newFiles = values.imageUrls.filter((item): item is File => item instanceof File);
+
+      const uploadPromises = newFiles.map(file => 
+          uploadImage(file, `hotels/${hotelId}/rooms`)
+      );
+      const newUrls = await Promise.all(uploadPromises);
+
+      const finalImageUrls = [...existingUrls, ...newUrls];
+
       const roomPayload = {
         ...values,
-        imageUrls: values.imageUrls.filter(url => url && url.trim() !== ''),
+        imageUrls: finalImageUrls,
         hotelId,
         aiHint: 'hotel room',
       };
@@ -160,33 +175,27 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
                 )}
                 />
             </div>
-            <div className="space-y-2">
-                <FormLabel>Room Images</FormLabel>
-                <FormDescription>Add up to 2 image URLs for the room.</FormDescription>
-                <FormField
-                    control={form.control}
-                    name={`imageUrls.0`}
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormControl>
-                        <Input placeholder="Image URL 1" {...field} />
-                        </FormControl>
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name={`imageUrls.1`}
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormControl>
-                        <Input placeholder="Image URL 2 (Optional)" {...field} />
-                        </FormControl>
-                    </FormItem>
-                    )}
-                />
-                <FormMessage>{form.formState.errors.imageUrls?.message}</FormMessage>
-            </div>
+            <FormField
+              control={form.control}
+              name="imageUrls"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Room Images</FormLabel>
+                  <FormControl>
+                    <ImageUploader
+                      value={field.value}
+                      onChange={field.onChange}
+                      maxFiles={2}
+                      label="PNG, JPG, up to 10MB"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Add up to 2 images for the room.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="isAvailable"
@@ -202,7 +211,9 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
               )}
             />
             <DialogFooter>
-              <Button type="submit">Save</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving..." : "Save"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

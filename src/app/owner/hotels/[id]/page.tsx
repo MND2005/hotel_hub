@@ -31,6 +31,9 @@ import { useParams, useRouter } from "next/navigation";
 import { getHotel, updateHotel } from "@/lib/firebase/hotels";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageUploader } from "@/components/app/image-uploader";
+import { uploadImage } from "@/lib/firebase/storage";
+import { auth } from "@/lib/firebase";
 
 const hotelDetailsSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -39,7 +42,7 @@ const hotelDetailsSchema = z.object({
   latitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   longitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   isOpen: z.boolean().default(true),
-  imageUrls: z.array(z.string().url("Please enter a valid URL.").or(z.literal(''))).min(5).max(5),
+  imageUrls: z.array(z.any()).min(1, "At least one image is required.").max(5, "You can upload a maximum of 5 images."),
 });
 
 export default function HotelDetailsPage() {
@@ -61,7 +64,7 @@ export default function HotelDetailsPage() {
       latitude: 0,
       longitude: 0,
       isOpen: true,
-      imageUrls: ["", "", "", "", ""],
+      imageUrls: [],
     },
   });
 
@@ -71,11 +74,7 @@ export default function HotelDetailsPage() {
     try {
       const data = await getHotel(hotelId);
       if (data) {
-        const paddedImageUrls = [...(data.imageUrls || [])];
-        while (paddedImageUrls.length < 5) {
-            paddedImageUrls.push('');
-        }
-        form.reset({ ...data, imageUrls: paddedImageUrls });
+        form.reset({ ...data, imageUrls: data.imageUrls || [] });
         setMarkerPosition({ lat: data.latitude, lng: data.longitude });
       } else {
         toast({
@@ -102,16 +101,32 @@ export default function HotelDetailsPage() {
   }, [fetchHotelData]);
 
   async function onSubmit(values: z.infer<typeof hotelDetailsSchema>) {
+    if (!auth.currentUser) {
+        toast({ title: "Authentication Error", description: "You are not logged in.", variant: "destructive" });
+        return;
+    }
+
     try {
+        const existingUrls = values.imageUrls.filter((item): item is string => typeof item === 'string');
+        const newFiles = values.imageUrls.filter((item): item is File => item instanceof File);
+
+        const uploadPromises = newFiles.map(file => 
+            uploadImage(file, `hotels/${hotelId}/${auth.currentUser!.uid}`)
+        );
+        const newUrls = await Promise.all(uploadPromises);
+
         const payload = {
           ...values,
-          imageUrls: values.imageUrls.filter(url => url.trim() !== '')
+          imageUrls: [...existingUrls, ...newUrls],
         };
+
         await updateHotel(hotelId, payload);
         toast({
             title: "Success",
             description: "Hotel details updated successfully."
         });
+        form.reset({ ...form.getValues(), imageUrls: payload.imageUrls });
+
     } catch (error) {
         console.error("Failed to update hotel:", error);
         toast({
@@ -232,25 +247,27 @@ export default function HotelDetailsPage() {
                 </div>
             </div>
 
-            <div className="space-y-2">
-                <FormLabel>Hotel Images</FormLabel>
-                <FormDescription>Add up to 5 image URLs for your hotel gallery.</FormDescription>
-                {Array.from({ length: 5 }).map((_, index) => (
-                <FormField
-                    key={index}
-                    control={form.control}
-                    name={`imageUrls.${index}` as const}
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormControl>
-                        <Input placeholder={`Image URL ${index + 1}`} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                ))}
-            </div>
+            <FormField
+              control={form.control}
+              name="imageUrls"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Hotel Images</FormLabel>
+                  <FormControl>
+                    <ImageUploader
+                      value={field.value}
+                      onChange={field.onChange}
+                      maxFiles={5}
+                      label="PNG, JPG, GIF up to 10MB"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Upload up to 5 images for your hotel gallery.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
                 control={form.control}

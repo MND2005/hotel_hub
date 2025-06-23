@@ -29,6 +29,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import type { MenuItem } from "@/lib/types";
 import { addMenuItem, updateMenuItem } from "@/lib/firebase/menu";
+import { ImageUploader } from "@/components/app/image-uploader";
+import { uploadImage } from "@/lib/firebase/storage";
+import { auth } from "@/lib/firebase";
 
 const menuItemSchema = z.object({
   name: z.string().min(1, "Item name is required."),
@@ -37,7 +40,7 @@ const menuItemSchema = z.object({
   category: z.enum(["breakfast", "lunch", "dinner"], {
     required_error: "You need to select a menu category.",
   }),
-  imageUrl: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
+  imageUrl: z.any().optional(),
 });
 
 type MenuItemFormDialogProps = {
@@ -54,28 +57,52 @@ export function MenuItemFormDialog({ isOpen, setIsOpen, hotelId, menuItem, onSav
 
   const form = useForm<z.infer<typeof menuItemSchema>>({
     resolver: zodResolver(menuItemSchema),
-  });
-
-  useEffect(() => {
-    if (menuItem) {
-      form.reset(menuItem);
-    } else {
-      form.reset({
+    defaultValues: {
         name: "",
         description: "",
         price: 0,
-        imageUrl: "",
-      });
+        imageUrl: null,
     }
-  }, [menuItem, form]);
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+        if (menuItem) {
+          form.reset(menuItem);
+        } else {
+          form.reset({
+            name: "",
+            description: "",
+            price: 0,
+            category: "breakfast",
+            imageUrl: null,
+          });
+        }
+    }
+  }, [menuItem, form, isOpen]);
 
   async function onSubmit(values: z.infer<typeof menuItemSchema>) {
+    if (!auth.currentUser) {
+        toast({ title: "Authentication Error", description: "You are not logged in.", variant: "destructive" });
+        return;
+    }
     try {
+       let finalImageUrl = '';
+       const imageValue = values.imageUrl;
+
+       if (typeof imageValue === 'string') {
+         finalImageUrl = imageValue;
+       } else if (imageValue instanceof File) {
+         finalImageUrl = await uploadImage(imageValue, `hotels/${hotelId}/menu`);
+       }
+
        const menuItemPayload = {
-        ...values,
-        hotelId,
+        name: values.name,
         description: values.description || '',
-        imageUrl: values.imageUrl || '',
+        price: values.price,
+        category: values.category,
+        hotelId,
+        imageUrl: finalImageUrl,
         aiHint: 'food plate',
       };
 
@@ -175,19 +202,26 @@ export function MenuItemFormDialog({ isOpen, setIsOpen, hotelId, menuItem, onSav
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
+                  <FormLabel>Image</FormLabel>
+                   <FormControl>
+                    <ImageUploader
+                      value={field.value ? [field.value] : []}
+                      onChange={(files) => field.onChange(files[0] || null)}
+                      maxFiles={1}
+                      label="PNG, JPG, up to 10MB"
+                    />
                   </FormControl>
                   <FormDescription>
-                    (Optional) A direct link to an image of the food item.
+                    (Optional) Upload an image of the food item.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="submit">Save</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving..." : "Save"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

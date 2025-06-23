@@ -31,6 +31,8 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { addHotel } from "@/lib/firebase/hotels";
 import { auth } from "@/lib/firebase";
+import { ImageUploader } from "@/components/app/image-uploader";
+import { uploadImage } from "@/lib/firebase/storage";
 
 
 const addHotelSchema = z.object({
@@ -40,7 +42,7 @@ const addHotelSchema = z.object({
   latitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   longitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   isOpen: z.boolean().default(true),
-  imageUrls: z.array(z.string().url("Please enter a valid URL.").or(z.literal(''))).min(5).max(5),
+  imageUrls: z.array(z.any()).min(1, "At least one image is required.").max(5, "You can upload a maximum of 5 images."),
 });
 
 export default function AddHotelPage() {
@@ -58,7 +60,7 @@ export default function AddHotelPage() {
       latitude: 0,
       longitude: 0,
       isOpen: true,
-      imageUrls: ["", "", "", "", ""],
+      imageUrls: [],
     },
   });
 
@@ -72,11 +74,20 @@ export default function AddHotelPage() {
       return;
     }
     try {
+      const uploadPromises = values.imageUrls.map(file => 
+          uploadImage(file, `hotels/temp/${auth.currentUser!.uid}`) // temp path until we have hotelId
+      );
+      const uploadedUrls = await Promise.all(uploadPromises);
+
       const payload = {
         ...values,
-        imageUrls: values.imageUrls.filter(url => url.trim() !== ''),
+        imageUrls: uploadedUrls,
       };
-      await addHotel(payload);
+
+      const hotelId = await addHotel(payload);
+
+      // Here you might want to move images from temp to a permanent folder, but for simplicity we'll leave them.
+      
       toast({
         title: "Hotel Added",
         description: "Your new hotel has been saved successfully.",
@@ -152,25 +163,27 @@ export default function AddHotelPage() {
                     </FormItem>
                   )}
                 />
-                 <div className="space-y-2">
-                    <FormLabel>Hotel Images</FormLabel>
-                    <FormDescription>Add up to 5 image URLs for your hotel gallery.</FormDescription>
-                    {Array.from({ length: 5 }).map((_, index) => (
-                    <FormField
-                        key={index}
-                        control={form.control}
-                        name={`imageUrls.${index}` as const}
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormControl>
-                            <Input placeholder={`Image URL ${index + 1}`} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    ))}
-                </div>
+                <FormField
+                  control={form.control}
+                  name="imageUrls"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hotel Images</FormLabel>
+                      <FormControl>
+                        <ImageUploader
+                          value={field.value}
+                          onChange={field.onChange}
+                          maxFiles={5}
+                          label="PNG, JPG, GIF up to 10MB"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Upload up to 5 images for your hotel gallery.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                  <FormField
                     control={form.control}
                     name="latitude"
@@ -202,7 +215,9 @@ export default function AddHotelPage() {
                 />
               </CardContent>
               <CardFooter className="gap-2">
-                <Button type="submit">Save Hotel</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? "Saving..." : "Save Hotel"}
+                </Button>
                 <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
               </CardFooter>
             </Card>
