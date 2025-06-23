@@ -40,7 +40,7 @@ const menuItemSchema = z.object({
   category: z.enum(["breakfast", "lunch", "dinner"], {
     required_error: "You need to select a menu category.",
   }),
-  imageUrl: z.any().optional(),
+  imageUrl: z.union([z.string(), z.instanceof(File)]).nullable().optional(),
 });
 
 type MenuItemFormDialogProps = {

@@ -37,9 +37,9 @@ const roomSchema = z.object({
   price: z.coerce.number().positive("Price must be a positive number."),
   capacity: z.coerce.number().int().positive("Capacity must be a positive integer."),
   isAvailable: z.boolean().default(true),
-  imageUrls: z.array(z.any()).max(2, "You can upload a maximum of 2 images.").refine(
-    (urls) => urls.filter(Boolean).length > 0, { message: "At least one image is required."}
-  ),
+  imageUrls: z.array(z.union([z.string(), z.instanceof(File)]))
+    .min(1, "At least one image is required.")
+    .max(2, "You can upload a maximum of 2 images."),
 });
 
 type RoomFormDialogProps = {

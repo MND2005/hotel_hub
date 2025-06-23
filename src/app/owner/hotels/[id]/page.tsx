@@ -42,7 +42,9 @@ const hotelDetailsSchema = z.object({
   latitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   longitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   isOpen: z.boolean().default(true),
-  imageUrls: z.array(z.any()).min(1, "At least one image is required.").max(5, "You can upload a maximum of 5 images."),
+  imageUrls: z.array(z.union([z.string(), z.instanceof(File)]))
+    .min(1, "At least one image is required.")
+    .max(5, "You can upload a maximum of 5 images."),
 });
 
 export default function HotelDetailsPage() {
