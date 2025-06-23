@@ -26,7 +26,7 @@ export type Room = {
   price: number;
   capacity: number;
   isAvailable: boolean;
-  imageUrl: string;
+  imageUrls: string[];
   aiHint?: string;
 };
 

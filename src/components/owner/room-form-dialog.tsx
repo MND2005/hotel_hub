@@ -17,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,6 +34,9 @@ const roomSchema = z.object({
   price: z.coerce.number().positive("Price must be a positive number."),
   capacity: z.coerce.number().int().positive("Capacity must be a positive integer."),
   isAvailable: z.boolean().default(true),
+  imageUrls: z.array(z.string().url("Please enter a valid URL.").or(z.literal(''))).max(2).refine(
+    (urls) => urls.some(url => url.trim() !== ''), { message: "At least one image URL is required."}
+  ),
 });
 
 type RoomFormDialogProps = {
@@ -54,28 +58,34 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
       price: 0,
       capacity: 1,
       isAvailable: true,
+      imageUrls: ["", ""],
     },
   });
 
   useEffect(() => {
-    if (room) {
-      form.reset(room);
-    } else {
-      form.reset({
-        type: "",
-        price: 0,
-        capacity: 1,
-        isAvailable: true,
-      });
+    if (isOpen && isEditMode && room) {
+        const paddedImageUrls = [...(room.imageUrls || [])];
+        while (paddedImageUrls.length < 2) {
+            paddedImageUrls.push('');
+        }
+        form.reset({ ...room, imageUrls: paddedImageUrls });
+    } else if (isOpen && !isEditMode) {
+        form.reset({
+            type: "",
+            price: 0,
+            capacity: 1,
+            isAvailable: true,
+            imageUrls: ["", ""],
+        });
     }
-  }, [room, form]);
+  }, [isOpen, isEditMode, room, form]);
 
   async function onSubmit(values: z.infer<typeof roomSchema>) {
     try {
       const roomPayload = {
         ...values,
+        imageUrls: values.imageUrls.filter(url => url && url.trim() !== ''),
         hotelId,
-        imageUrl: 'https://placehold.co/600x400.png',
         aiHint: 'hotel room',
       };
 
@@ -122,32 +132,61 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price per Night</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="100.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="capacity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Guest Capacity</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="2" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Price/Night</FormLabel>
+                    <FormControl>
+                        <Input type="number" placeholder="100" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="capacity"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Capacity</FormLabel>
+                    <FormControl>
+                        <Input type="number" placeholder="2" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+            <div className="space-y-2">
+                <FormLabel>Room Images</FormLabel>
+                <FormDescription>Add up to 2 image URLs for the room.</FormDescription>
+                <FormField
+                    control={form.control}
+                    name={`imageUrls.0`}
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormControl>
+                        <Input placeholder="Image URL 1" {...field} />
+                        </FormControl>
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name={`imageUrls.1`}
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormControl>
+                        <Input placeholder="Image URL 2 (Optional)" {...field} />
+                        </FormControl>
+                    </FormItem>
+                    )}
+                />
+                <FormMessage>{form.formState.errors.imageUrls?.message}</FormMessage>
+            </div>
             <FormField
               control={form.control}
               name="isAvailable"

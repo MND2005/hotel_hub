@@ -175,7 +175,7 @@ export default function HotelDetailPage() {
                     ) : rooms.map(room => (
                         <Card key={room.id} className="flex flex-col md:flex-row items-center">
                             <div className="relative w-full md:w-48 h-48 md:h-full">
-                               <Image src={room.imageUrl} data-ai-hint={room.aiHint} alt={room.type} fill className="object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none" />
+                               <Image src={room.imageUrls?.[0] || 'https://placehold.co/600x400.png'} data-ai-hint={room.aiHint} alt={room.type} fill className="object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none" />
                             </div>
                             <CardHeader className="flex-1">
                                 <CardTitle>{room.type}</CardTitle>

@@ -1,7 +1,6 @@
 
 'use client';
 
-import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -20,6 +19,7 @@ import type { Room } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoomFormDialog } from "@/components/owner/room-form-dialog";
+import { HotelCardImage } from "@/components/app/hotel-card-image";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -153,7 +153,7 @@ export default function HotelRoomsPage() {
                 <Card key={room.id} className="overflow-hidden flex flex-col">
                   <CardHeader className="p-0">
                     <div className="relative h-48 w-full">
-                      <Image src={room.imageUrl} data-ai-hint={room.aiHint || 'hotel room'} alt={room.type} layout="fill" objectFit="cover" />
+                       <HotelCardImage imageUrls={room.imageUrls} alt={room.type} />
                       <Badge className="absolute top-2 right-2" variant={room.isAvailable ? 'default' : 'destructive'}>
                         {room.isAvailable ? 'Available' : 'Booked'}
                       </Badge>
