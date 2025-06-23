@@ -147,6 +147,7 @@ export default function Home() {
                                     width={600}
                                     height={400}
                                     className="w-full h-full object-cover"
+                                    data-ai-hint="hotel exterior"
                                 />
                             </div>
                             <h3 className="text-3xl font-bold text-center drop-shadow-md">{nearestHotel.name}</h3>
@@ -159,7 +160,7 @@ export default function Home() {
                     </CardContent>
                     <CardFooter>
                         <Button asChild size="lg" className="w-full bg-white/90 text-black hover:bg-white">
-                            <Link href={`/customer/hotels/${nearestHotel.id}`}>
+                            <Link href="/login">
                                 View Hotel & Book
                             </Link>
                         </Button>
