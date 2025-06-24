@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from "next/link";
@@ -9,6 +10,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -110,13 +112,21 @@ export default function Home() {
       return () => clearInterval(interval);
     }
   }, [nearestHotel]);
+  
+  const mapMarkers = [];
+  if (nearestHotel) {
+    mapMarkers.push({ lat: nearestHotel.latitude, lng: nearestHotel.longitude, name: nearestHotel.name });
+  }
+  if (userLocation && !error) {
+    mapMarkers.push({ lat: userLocation.lat, lng: userLocation.lng, name: 'Your Location' });
+  }
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black">
         <Map
-            center={nearestHotel ? { lat: nearestHotel.latitude, lng: nearestHotel.longitude } : sriLankaCenter}
+            center={userLocation && !error ? userLocation : (nearestHotel ? { lat: nearestHotel.latitude, lng: nearestHotel.longitude } : sriLankaCenter)}
             zoom={nearestHotel ? 13 : 8}
-            markers={nearestHotel ? [{ lat: nearestHotel.latitude, lng: nearestHotel.longitude, name: nearestHotel.name }] : []}
+            markers={mapMarkers}
             className="absolute inset-0 w-full h-full"
         />
         <div className="absolute inset-0 bg-black/40" />
@@ -140,7 +150,8 @@ export default function Home() {
                 ) : nearestHotel ? (
                     <Card className="w-full max-w-md mx-4 bg-black/20 backdrop-blur-xl border-white/20 text-white shadow-2xl animate-fade-in">
                         <CardHeader>
-                            <CardTitle className="text-center text-xl tracking-wide">Closest Hotel to You</CardTitle>
+                            <CardTitle className="text-center text-xl tracking-wide">Featured Hotel</CardTitle>
+                             {error && <CardDescription className="text-center text-red-400 pt-2">{error}</CardDescription>}
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
