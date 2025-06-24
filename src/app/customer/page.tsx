@@ -87,8 +87,6 @@ export default function CustomerExplorePage() {
             message = "Location access was denied. Please enable it in your browser settings.";
           } else if (err.code === err.POSITION_UNAVAILABLE) {
             message = "Location information is currently unavailable. Please try again later or check your device settings.";
-          } else if (err.code === err.TIMEOUT) {
-            message = "The request to get your location timed out. Please check your network connection and try again.";
           }
           toast({
             variant: "destructive",
@@ -96,7 +94,7 @@ export default function CustomerExplorePage() {
             description: message,
           });
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        { enableHighAccuracy: true, maximumAge: 0 }
       );
     });
   };

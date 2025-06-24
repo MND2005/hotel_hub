@@ -74,15 +74,12 @@ export default function Home() {
               message = "Location access was denied. Please enable it in your browser settings to see nearby hotels.";
             } else if (err.code === err.POSITION_UNAVAILABLE) {
                 message = "Location information is unavailable. Showing hotels across Sri Lanka.";
-            } else if (err.code === err.TIMEOUT) {
-                message = "The request to get user location timed out. Showing hotels across Sri Lanka.";
             }
             setError(message);
             resolve(sriLankaCenter);
           },
           {
             enableHighAccuracy: true,
-            timeout: 15000,
             maximumAge: 0,
           }
         );
