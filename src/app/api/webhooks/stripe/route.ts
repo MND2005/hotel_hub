@@ -3,7 +3,7 @@ import { stripe } from '@/lib/stripe';
 import { headers } from 'next/headers';
 import type { Stripe } from 'stripe';
 import { NextResponse } from 'next/server';
-import { addOrder } from '@/lib/firebase/orders';
+import { addOrderByAdmin } from '@/lib/firebase/orders';
 import { getHotel } from '@/lib/firebase/hotels';
 
 export async function POST(req: Request) {
@@ -44,7 +44,8 @@ export async function POST(req: Request) {
             return new Response(`Webhook Error: Hotel not found`, { status: 400 });
         }
 
-        await addOrder({
+        // Use the admin function to create the order, bypassing security rules
+        await addOrderByAdmin({
             customerId: userId,
             hotelId,
             ownerId: hotel.ownerId,
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
             type,
             stripeCheckoutSessionId: session.id,
         });
-        console.log(`Order created successfully for user ${userId}`);
+        console.log(`Order created successfully for user ${userId} via Admin SDK`);
     } catch (error) {
         console.error('Failed to create order in database', error);
         return new Response('Failed to create order in database', { status: 500 });

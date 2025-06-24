@@ -3,96 +3,54 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ===== HELPER FUNCTIONS =====
-    function isSignedIn() {
-      return request.auth != null;
+  
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function isRole(role) {
-      return isSignedIn() && getUserData(request.auth.uid).role == role;
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId || isAdmin();
+      allow create: if request.auth.uid == userId;
     }
     
-    function isHotelOwner(hotelId) {
-        return isSignedIn() && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid;
-    }
-
-    // ===== USERS =====
-    match /users/{userId} {
-      allow read: if isOwner(userId) || isRole('admin');
-      
-      allow create: if isOwner(userId)
-                    && request.resource.data.id == userId
-                    && request.resource.data.name is string
-                    && request.resource.data.email == request.auth.token.email
-                    && request.resource.data.role in ['customer', 'owner', 'admin']
-                    && request.resource.data.joinedDate is string;
-      
-      allow update: if isRole('admin'); 
-      allow delete: if isRole('admin');
-    }
-
-    // ===== HOTELS & SUBCOLLECTIONS =====
     match /hotels/{hotelId} {
+      // Allow read if hotel is open, or if user is owner or admin
       allow read: if resource.data.isOpen == true 
-                  || (isSignedIn() && resource.data.ownerId == request.auth.uid) 
-                  || isRole('admin');
+                   || isAdmin()
+                   || (request.auth.uid != null && resource.data.ownerId == request.auth.uid);
 
-      allow create: if isSignedIn() 
-                    && request.resource.data.ownerId == request.auth.uid;
-
-      allow update: if isHotelOwner(hotelId) || isRole('admin');
+      allow create: if request.auth.uid == request.resource.data.ownerId;
+      allow update: if request.auth.uid == resource.data.ownerId || isAdmin();
       
-      allow delete: if isRole('admin');
-
-      // --- ROOMS subcollection ---
       match /rooms/{roomId} {
-        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true 
-                    || isHotelOwner(hotelId) 
-                    || isRole('admin');
-        allow write: if isHotelOwner(hotelId) || isRole('admin');
+        allow read: if true;
+        allow write, delete: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid || isAdmin();
       }
 
-      // --- MENU ITEMS subcollection ---
       match /menuItems/{menuItemId} {
-        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true 
-                    || isHotelOwner(hotelId) 
-                    || isRole('admin');
-        allow write: if isHotelOwner(hotelId) || isRole('admin');
+        allow read: if true;
+        allow write, delete: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid || isAdmin();
       }
     }
-
-    // ===== ORDERS =====
+    
     match /orders/{orderId} {
-      allow create: if request.resource.data.stripeCheckoutSessionId is string
-                    && request.resource.data.customerId is string
-                    && request.resource.data.hotelId is string
-                    && request.resource.data.ownerId is string;
-
-      allow read: if (isSignedIn() && resource.data.customerId == request.auth.uid) 
-                  || (isSignedIn() && resource.data.ownerId == request.auth.uid) 
-                  || isRole('admin');
-
-      allow update, delete: if isRole('admin');
+      // IMPORTANT: Orders can ONLY be created by the backend (Stripe webhook) using the Admin SDK.
+      // We explicitly deny create access from the client to prevent fraud.
+      allow create: if false; 
+      
+      // Allow read only by the customer who made it, the owner of the hotel, or an admin.
+      allow read: if request.auth.uid == resource.data.customerId 
+                   || request.auth.uid == resource.data.ownerId
+                   || isAdmin();
+      
+      // No updates or deletes from the client for now.
+      allow update, delete: if false;
     }
 
-    // ===== WITHDRAWALS =====
     match /withdrawals/{withdrawalId} {
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      
-      allow read: if (isSignedIn() && resource.data.ownerId == request.auth.uid) || isRole('admin');
-      
-      allow update: if isRole('admin');
-      
-      allow delete: if isRole('admin');
+        allow read, create: if request.auth.uid == request.resource.data.ownerId || isAdmin();
+        allow update: if isAdmin();
     }
   }
 }
