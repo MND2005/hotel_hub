@@ -37,6 +37,10 @@ const Map = ({ center, zoom = 12, onMapClick, markerPosition, markers, className
   const handleMarkerClick = (marker: MapMarker) => {
     setActiveMarker(marker);
   };
+  
+  const userLocationIcon = {
+    url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+  };
 
   if (loadError || !apiKey) {
     return (
@@ -85,6 +89,7 @@ const Map = ({ center, zoom = 12, onMapClick, markerPosition, markers, className
             position={marker}
             title={marker.name}
             onClick={() => handleMarkerClick(marker)}
+            icon={marker.name === 'Your Location' ? userLocationIcon : undefined}
           />
         ))}
         {activeMarker && (
