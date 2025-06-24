@@ -1,96 +1,66 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    function isOwnUser(userId) {
-      return isAuth() && request.auth.uid == userId;
-    }
-    
+  
+    // Allow admins to do anything
     function isAdmin() {
-      // This requires that a user can read their own user document to check the 'role' field.
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function isHotelOwner(hotelId) {
-      return isAuth() && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid;
-    }
-
-    // Collection rules
+    // Allow logged-in users to read their own profile
     match /users/{userId} {
-      // A user can get their own doc. An admin can get any doc.
-      // This 'get' permission is also what allows the isAdmin() function to work.
-      allow get: if isOwnUser(userId) || isAdmin();
-      
-      // Only admins can list all users.
+      allow get: if request.auth.uid == userId || isAdmin();
       allow list: if isAdmin();
-      
-      // Anyone can create a user (signup).
-      allow create: if true;
-      
-      // A user can update their own doc. An admin can update any doc.
-      allow update: if isOwnUser(userId) || isAdmin();
-      
-      // No deletes for now.
-      allow delete: if false;
+      allow update: if request.auth.uid == userId || isAdmin();
     }
 
+    // Hotels
     match /hotels/{hotelId} {
-      // Anyone can read public hotel data.
-      allow get: if true;
-      // Anyone can list hotels. The client-side query is responsible for filtering (e.g., for 'isOpen').
-      allow list: if true;
-
-      // An owner can create their hotel. Admin can too.
-      allow create: if isAuth() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isAdmin() || isHotelOwner(hotelId);
-      // No deletes for now.
-      allow delete: if false;
+      // Any authenticated user can read hotel data that is open
+      allow get: if request.auth != null && (resource.data.isOpen == true || isAdmin());
+      // Only show open hotels in lists, except for admins
+      allow list: if request.auth != null && (resource.data.isOpen == true || isAdmin());
       
-      match /rooms/{roomId} {
-        // Anyone can read room data.
-        allow read: if true;
-        // Only owner or admin can write.
-        allow write: if isAdmin() || isHotelOwner(hotelId);
-      }
-      
-      match /menuItems/{menuItemId} {
-        // Anyone can read menu items.
-        allow read: if true;
-        // Only owner or admin can write.
-        allow write: if isAdmin() || isHotelOwner(hotelId);
-      }
+      // Only owners or admins can write to hotels
+      allow write: if (request.auth.uid == resource.data.ownerId || isAdmin());
+      // Anyone can create a hotel
+      allow create: if request.auth != null;
     }
     
-    match /orders/{orderId} {
-        // Customer who created it or admin can get it.
-        allow get: if isAdmin() || (isAuth() && resource.data.customerId == request.auth.uid);
-        // A customer can list their own orders. An admin can list all.
-        // The query from the client MUST contain `where('customerId', '==', request.auth.uid)`
-        allow list: if isAuth();
-        // Only authenticated customers can create orders for themselves.
-        allow create: if isAuth() && request.resource.data.customerId == request.auth.uid;
-        // No updates/deletes for now.
-        allow update, delete: if false;
+    // Rooms and Menu Items (subcollections of hotels)
+    match /hotels/{hotelId}/{subcollection}/{itemId} {
+       // Anyone can read rooms/menu items of an open hotel
+      allow get: if request.auth != null && (get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || isAdmin());
+      allow list: if request.auth != null && (get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || isAdmin());
+      
+      // Only owners or admins can write to their hotel's subcollections
+      allow write: if (request.auth.uid == get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId || isAdmin());
     }
-
+    
+    // Orders
+    match /orders/{orderId} {
+      // A customer can read their own single order. Admins can read any order.
+      allow get: if request.auth.uid == resource.data.customerId || isAdmin();
+      
+      // A customer can query for their own orders.
+      allow list: if request.auth.uid != null;
+      
+      // Allow order creation from the backend webhook.
+      allow create: if request.resource.data.customerId is string;
+      
+      // Orders are immutable by clients.
+      allow update, delete: if false;
+    }
+    
+     // Withdrawals
     match /withdrawals/{withdrawalId} {
-        // Owner who created it or admin can get it.
-        allow get: if isAdmin() || (isAuth() && resource.data.ownerId == request.auth.uid);
-        // Only admins can list all withdrawals.
-        allow list: if isAdmin();
-        // Only an owner can create a request for themselves.
-        allow create: if isAuth() && request.resource.data.ownerId == request.auth.uid;
-        // Only admins can update (approve/deny).
-        allow update: if isAdmin();
-        // No deletes for now.
-        allow delete: if false;
+        // Only owner and admins can read.
+        allow get: if request.auth.uid == resource.data.ownerId || isAdmin();
+        allow list: if isAdmin(); // Only admins can list all.
+        allow create: if request.auth.uid == request.resource.data.ownerId;
+        allow update, delete: if isAdmin();
     }
   }
 }
