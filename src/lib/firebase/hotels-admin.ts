@@ -1,10 +1,14 @@
 
 'use server';
 
+// This file is deprecated. The logic has been moved directly into the Stripe webhook
+// at /src/app/api/webhooks/stripe/route.ts to simplify module resolution.
+
 import { adminDb } from '@/lib/firebase-admin';
 import type { Hotel } from '@/lib/types';
 
 export async function getHotelByAdmin(hotelId: string): Promise<Hotel | null> {
+    console.warn("getHotelByAdmin is deprecated. Use the internal function in the Stripe webhook.");
     if (!adminDb) {
         throw new Error("Firebase Admin SDK is not initialized. Cannot get hotel.");
     }
