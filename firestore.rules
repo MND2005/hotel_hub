@@ -1,9 +1,12 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
+    function isOwner(hotelId) {
+      return request.auth.uid == get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId;
+    }
+
     function isAdmin() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -11,46 +14,36 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, update: if request.auth.uid == userId || isAdmin();
-      allow create: if request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
     }
-    
+
     match /hotels/{hotelId} {
-      // Allow read if hotel is open, or if user is owner or admin
-      allow read: if resource.data.isOpen == true 
-                   || isAdmin()
-                   || (request.auth.uid != null && resource.data.ownerId == request.auth.uid);
+        allow read: if true; // Hotels are public
+        allow create: if request.auth.uid != null && request.resource.data.ownerId == request.auth.uid;
+        allow update, delete: if isOwner(hotelId) || isAdmin();
 
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if request.auth.uid == resource.data.ownerId || isAdmin();
-      
-      match /rooms/{roomId} {
-        allow read: if true;
-        allow write, delete: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid || isAdmin();
-      }
+        match /{subcollection}/{itemId} {
+            allow read: if true;
+            allow create, update, delete: if isOwner(hotelId) || isAdmin();
+        }
+    }
 
-      match /menuItems/{menuItemId} {
-        allow read: if true;
-        allow write, delete: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid || isAdmin();
-      }
+    // Webhook will use Admin SDK to bypass rules for creation.
+    // Customers can read their own orders.
+    // Owners can read orders for their hotels.
+    // Admins can read all orders.
+    match /orders/{orderId} {
+      allow create: if false; // No direct client creation
+      allow read: if isAdmin() || 
+                     (request.auth.uid == resource.data.customerId) ||
+                     (request.auth.uid == resource.data.ownerId);
+      allow update: if isAdmin() || (request.auth.uid == resource.data.ownerId); // Owner can update status
+      allow delete: if isAdmin();
     }
     
-    match /orders/{orderId} {
-      // IMPORTANT: Orders can ONLY be created by the backend (Stripe webhook) using the Admin SDK.
-      // We explicitly deny create access from the client to prevent fraud.
-      allow create: if false; 
-      
-      // Allow read only by the customer who made it, the owner of the hotel, or an admin.
-      allow read: if request.auth.uid == resource.data.customerId 
-                   || request.auth.uid == resource.data.ownerId
-                   || isAdmin();
-      
-      // No updates or deletes from the client for now.
-      allow update, delete: if false;
-    }
-
     match /withdrawals/{withdrawalId} {
-        allow read, create: if request.auth.uid == request.resource.data.ownerId || isAdmin();
-        allow update: if isAdmin();
+        allow read, write: if isAdmin();
+        allow create: if request.auth.uid != null && request.resource.data.ownerId == request.auth.uid;
     }
   }
 }
