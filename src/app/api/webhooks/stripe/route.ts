@@ -3,7 +3,7 @@ import { stripe } from '@/lib/stripe';
 import { headers } from 'next/headers';
 import type { Stripe } from 'stripe';
 import { NextResponse } from 'next/server';
-import { addOrderByAdmin } from '@/lib/firebase/orders';
+import { addOrderByAdmin } from '@/lib/firebase/orders-admin';
 import { getHotel } from '@/lib/firebase/hotels';
 
 export async function POST(req: Request) {

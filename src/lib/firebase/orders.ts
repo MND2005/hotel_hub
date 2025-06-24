@@ -1,8 +1,7 @@
 
 import { db } from '@/lib/firebase';
-import { adminDb } from '@/lib/firebase-admin';
 import { firebaseNotConfiguredError } from './auth';
-import { collection, addDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 
 // This function uses the CLIENT SDK and is subject to security rules.
@@ -14,14 +13,6 @@ export async function addOrder(orderData: Omit<Order, 'id'>) {
     const docRef = await addDoc(collection(db, 'orders'), orderData);
     return docRef.id;
 }
-
-// This new function uses the ADMIN SDK to create an order, bypassing security rules.
-// It should ONLY be called from a trusted server environment (like our Stripe webhook).
-export async function addOrderByAdmin(orderData: Omit<Order, 'id'>) {
-    const docRef = await adminDb.collection('orders').add(orderData);
-    return docRef.id;
-}
-
 
 export async function getOrdersByCustomer(customerId: string): Promise<Order[]> {
     if (!db) {

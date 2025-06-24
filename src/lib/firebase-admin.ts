@@ -1,3 +1,4 @@
+'use server';
 
 import * as admin from 'firebase-admin';
 
@@ -19,7 +20,7 @@ if (!admin.apps.length) {
       }),
     });
     console.log('Firebase Admin SDK initialized successfully.');
-  } catch (error: any) {
+  } catch (error: any)
     console.error('Firebase admin initialization error:', error.stack);
   }
 }
