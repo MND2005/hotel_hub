@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, LocateFixed } from "lucide-react";
+import { MapPin } from "lucide-react";
 import Map from "@/components/app/map";
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { getAllHotels } from "@/lib/firebase/hotels";
 import type { Hotel } from "@/lib/types";
 import { getDistance } from "@/lib/utils";
@@ -28,76 +28,80 @@ export default function CustomerExplorePage() {
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isLocating, startLocating] = useTransition();
   const { toast } = useToast();
 
   const sriLankaCenter = { lat: 7.8731, lng: 80.7718 };
 
   useEffect(() => {
-    const fetchHotels = async () => {
+    const fetchAndSortHotels = async () => {
       setLoading(true);
       setError(null);
       try {
         const allHotels = await getAllHotels();
-        // Sort alphabetically by default
-        setHotels(allHotels.sort((a, b) => a.name.localeCompare(b.name)));
+
+        if (!navigator.geolocation) {
+          toast({
+            variant: 'default',
+            title: 'Geolocation Info',
+            description: 'Geolocation is not supported. Showing hotels alphabetically.',
+          });
+          setHotels(allHotels.sort((a, b) => a.name.localeCompare(b.name)));
+          setLoading(false);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const location = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            };
+            setUserLocation(location);
+
+            const hotelsWithDistance = allHotels.map((hotel) => ({
+              ...hotel,
+              distance: getDistance(
+                location.lat,
+                location.lng,
+                hotel.latitude,
+                hotel.longitude
+              ),
+            })).sort((a, b) => a.distance! - b.distance!);
+
+            setHotels(hotelsWithDistance);
+            toast({
+              title: 'Location Found',
+              description: 'Hotels sorted by distance from you.',
+            });
+            setLoading(false);
+          },
+          (err) => {
+            let message = 'Could not retrieve your location. Showing hotels alphabetically.';
+            if (err.code === err.PERMISSION_DENIED) {
+              message = 'Location access was denied. Please enable it to see hotels nearby.';
+            } else if (err.code === err.POSITION_UNAVAILABLE) {
+              message = 'Location information is currently unavailable.';
+            }
+            toast({
+              variant: 'default',
+              title: 'Geolocation Info',
+              description: message,
+            });
+            setHotels(allHotels.sort((a, b) => a.name.localeCompare(b.name)));
+            setLoading(false);
+          },
+          { enableHighAccuracy: true }
+        );
       } catch (dbError) {
-        console.error("Error fetching hotels:", dbError);
-        setError("Could not fetch hotel data.");
-      } finally {
+        console.error('Error fetching hotels:', dbError);
+        setError('Could not fetch hotel data.');
         setLoading(false);
       }
     };
-    fetchHotels();
-  }, []);
 
-  const handleSortByDistance = () => {
-    startLocating(() => {
-      if (!navigator.geolocation) {
-        toast({
-          variant: "destructive",
-          title: "Geolocation Error",
-          description: "Geolocation is not supported by your browser.",
-        });
-        return;
-      }
+    fetchAndSortHotels();
+  }, [toast]);
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          setUserLocation(location);
-
-          const hotelsWithDistance = [...hotels].map(hotel => ({
-            ...hotel,
-            distance: getDistance(location.lat, location.lng, hotel.latitude, hotel.longitude)
-          })).sort((a, b) => a.distance! - b.distance!);
-
-          setHotels(hotelsWithDistance);
-          toast({
-            title: "Location Found",
-            description: "Hotels sorted by distance from you.",
-          });
-        },
-        (err) => {
-          let message = "Could not retrieve your location.";
-          if (err.code === err.PERMISSION_DENIED) {
-            message = "Location access was denied. Please enable it in your browser settings.";
-          } else if (err.code === err.POSITION_UNAVAILABLE) {
-            message = "Location information is currently unavailable. Please try again later or check your device settings.";
-          }
-          toast({
-            variant: "destructive",
-            title: "Geolocation Error",
-            description: message,
-          });
-        },
-        { enableHighAccuracy: true, maximumAge: 0 }
-      );
-    });
-  };
 
   if (loading) {
     return (
@@ -132,17 +136,13 @@ export default function CustomerExplorePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="space-y-2 mb-8 flex justify-between items-center">
+      <div className="space-y-2 mb-8">
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Find Your Stay</h1>
             <p className="text-muted-foreground">
-                {userLocation ? "Showing hotels sorted by distance." : "Explore hotels for room bookings and food orders."}
+                {userLocation ? "Showing hotels sorted by distance from you." : "Explore hotels for room bookings and food orders."}
             </p>
         </div>
-        <Button onClick={handleSortByDistance} disabled={isLocating}>
-            <LocateFixed className="mr-2 h-4 w-4" />
-            {isLocating ? 'Locating...' : 'Sort by Distance'}
-        </Button>
       </div>
 
       {error && <p className="text-destructive mb-4">{error}</p>}
