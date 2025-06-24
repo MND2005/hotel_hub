@@ -35,10 +35,10 @@ export default function CustomerExplorePage() {
       setLoading(true);
       setError(null);
 
-      // Fetch user location
-      const getLocation = new Promise<{ lat: number, lng: number }>((resolve, reject) => {
+      const locationPromise = new Promise<{ lat: number; lng: number }>((resolve) => {
         if (!navigator.geolocation) {
-          reject("Geolocation is not supported by your browser.");
+          setError("Geolocation is not supported by your browser.");
+          resolve(sriLankaCenter);
         } else {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -47,20 +47,22 @@ export default function CustomerExplorePage() {
                 lng: position.coords.longitude,
               });
             },
-            () => {
-              reject("Unable to retrieve your location. Showing hotels across Sri Lanka.");
-            }
+            (err) => {
+              console.warn(`Geolocation Error (${err.code}): ${err.message}`);
+              let message = "Unable to retrieve your location. Showing hotels across Sri Lanka.";
+              if (err.code === err.PERMISSION_DENIED) {
+                 message = "Location access was denied. Please enable it in your browser settings to see nearby hotels.";
+              }
+              setError(message);
+              resolve(sriLankaCenter);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
           );
         }
       });
-
-      try {
-        const location = await getLocation;
-        setUserLocation(location);
-      } catch (locationError: any) {
-        setError(locationError as string);
-        setUserLocation(sriLankaCenter); // Default to Sri Lanka center on error
-      }
+      
+      const location = await locationPromise;
+      setUserLocation(location);
     };
 
     fetchHotelsAndLocation();

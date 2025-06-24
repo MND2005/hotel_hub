@@ -56,9 +56,9 @@ export default function Home() {
       setLoading(true);
       setError(null);
 
-      const location = await new Promise<{ lat: number, lng: number }>((resolve) => {
+      const location = await new Promise<{ lat: number; lng: number }>((resolve) => {
         if (!navigator.geolocation) {
-          setError("Geolocation is not supported. Showing hotels across Sri Lanka.");
+          setError("Geolocation is not supported by your browser.");
           resolve(sriLankaCenter);
         } else {
           navigator.geolocation.getCurrentPosition(
@@ -68,9 +68,23 @@ export default function Home() {
                 lng: position.coords.longitude,
               });
             },
-            () => {
-              setError("Could not get your location. Showing hotels across Sri Lanka.");
+            (err) => {
+              console.warn(`Geolocation Error (${err.code}): ${err.message}`);
+              let message = "Could not get your location. Showing hotels across Sri Lanka.";
+              if (err.code === err.PERMISSION_DENIED) {
+                message = "Location access was denied. Please enable it in your browser settings to see nearby hotels.";
+              } else if (err.code === err.POSITION_UNAVAILABLE) {
+                  message = "Location information is unavailable. Showing hotels across Sri Lanka.";
+              } else if (err.code === err.TIMEOUT) {
+                  message = "The request to get user location timed out. Showing hotels across Sri Lanka.";
+              }
+              setError(message);
               resolve(sriLankaCenter);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000, // 10 seconds
+              maximumAge: 0,
             }
           );
         }
