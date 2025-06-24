@@ -17,7 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
@@ -50,7 +49,6 @@ export default function CustomerOrdersPage() {
     setLoading(true);
     try {
       const fetchedOrders = await getOrdersByCustomer(userId);
-      // Sort orders by date on the client side
       fetchedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
       setOrders(fetchedOrders);
       fetchHotelNames(fetchedOrders);
@@ -63,16 +61,25 @@ export default function CustomerOrdersPage() {
 
   const fetchHotelNames = async (ordersToFetch: Order[]) => {
     const uniqueHotelIds = [...new Set(ordersToFetch.map(o => o.hotelId))];
-    const names: Record<string, string> = {};
-    for (const id of uniqueHotelIds) {
-      if (!hotelNames[id]) {
-        const hotel = await getHotel(id);
-        if (hotel) {
-          names[id] = hotel.name;
+    const namesCache = { ...hotelNames };
+    
+    const promises = uniqueHotelIds.map(async (id) => {
+      if (!namesCache[id]) {
+        try {
+          const hotel = await getHotel(id);
+          if (hotel) {
+            namesCache[id] = hotel.name;
+          } else {
+            namesCache[id] = "Unknown Hotel";
+          }
+        } catch {
+          namesCache[id] = "Unknown Hotel";
         }
       }
-    }
-    setHotelNames(prev => ({ ...prev, ...names }));
+    });
+
+    await Promise.all(promises);
+    setHotelNames(namesCache);
   };
 
   const renderStatusBadge = (status: Order['status']) => {
@@ -94,15 +101,20 @@ export default function CustomerOrdersPage() {
                     <Skeleton className="h-4 w-72 mt-2" />
                 </CardHeader>
                 <CardContent>
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className="flex justify-between items-center p-4 border-b">
-                            <div className="space-y-2">
-                                <Skeleton className="h-5 w-40" />
-                                <Skeleton className="h-4 w-60" />
-                            </div>
-                            <Skeleton className="h-10 w-24" />
-                        </div>
-                    ))}
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {[...Array(6)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {[...Array(3)].map((_, i) => (
+                            <TableRow key={i}>
+                                {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
         </div>
@@ -140,7 +152,7 @@ export default function CustomerOrdersPage() {
               ) : (
                 orders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">{hotelNames[order.hotelId] || order.hotelId}</TableCell>
+                    <TableCell className="font-medium">{hotelNames[order.hotelId] || <Skeleton className="h-4 w-24" />}</TableCell>
                     <TableCell>{format(new Date(order.orderDate), "PPP")}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="capitalize">{order.type}</Badge>
