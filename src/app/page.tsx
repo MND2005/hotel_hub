@@ -19,6 +19,7 @@ import { getAllHotels } from "@/lib/firebase/hotels";
 import { getDistance } from "@/lib/utils";
 import Map from "@/components/app/map";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 type HotelWithDistance = Hotel & { distance: number };
 
@@ -48,6 +49,7 @@ export default function Home() {
   const [nearestHotel, setNearestHotel] = useState<HotelWithDistance | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { toast } = useToast();
   
   const sriLankaCenter = { lat: 7.8731, lng: 80.7718 };
 
@@ -80,7 +82,6 @@ export default function Home() {
           },
           {
             enableHighAccuracy: true,
-            maximumAge: 0,
           }
         );
       }
@@ -208,7 +209,7 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-black/40" />
 
-        <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/20 p-4 backdrop-blur-lg sm:px-6 lg:px-8">
+        <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between border-b border-white/10 bg-black/20 p-4 backdrop-blur-lg sm:px-6 lg:px-8">
             <h1 className="text-2xl font-bold text-white drop-shadow-lg">Tri-Sided Hub</h1>
             <div className="space-x-2">
                 <Button asChild variant="ghost" className="text-white hover:bg-white/20 hover:text-white">
