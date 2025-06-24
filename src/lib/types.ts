@@ -45,6 +45,7 @@ export type Order = {
   id: string;
   customerId: string;
   hotelId: string;
+  ownerId: string;
   type: 'room' | 'food' | 'combined';
   items: { name: string; quantity: number, price: number }[];
   total: number;

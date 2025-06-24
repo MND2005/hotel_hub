@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import type { Stripe } from 'stripe';
 import { NextResponse } from 'next/server';
 import { addOrder } from '@/lib/firebase/orders';
+import { getHotel } from '@/lib/firebase/hotels';
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -35,9 +36,16 @@ export async function POST(req: Request) {
     const type = session.metadata.type as 'room' | 'food' | 'combined';
 
     try {
+        const hotel = await getHotel(hotelId);
+        if (!hotel) {
+            console.error(`Webhook Error: Hotel with ID ${hotelId} not found.`);
+            return new Response(`Webhook Error: Hotel not found`, { status: 400 });
+        }
+
         await addOrder({
             customerId: userId,
             hotelId,
+            ownerId: hotel.ownerId,
             items,
             total,
             status: 'confirmed',
