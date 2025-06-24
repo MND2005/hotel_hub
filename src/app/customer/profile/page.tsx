@@ -49,6 +49,8 @@ export default function CustomerProfilePage() {
             getOrdersByCustomer(currentUser.uid)
           ]);
           setUserData(dbUser);
+          // Sort orders by date on the client side
+          userOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
           setOrders(userOrders);
         } catch (error) {
           console.error("Failed to load profile data", error);

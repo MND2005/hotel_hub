@@ -53,6 +53,8 @@ export default function OwnerDashboard() {
           getOrdersByHotelOwner(ownerId),
           getAllUsers(),
         ]);
+        // Sort orders by date on the client side
+        ordersData.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
         setOrders(ordersData);
         setAllUsers(usersData);
       } catch (error) {

@@ -50,6 +50,8 @@ export default function CustomerOrdersPage() {
     setLoading(true);
     try {
       const fetchedOrders = await getOrdersByCustomer(userId);
+      // Sort orders by date on the client side
+      fetchedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
       setOrders(fetchedOrders);
       fetchHotelNames(fetchedOrders);
     } catch (error) {
@@ -92,7 +94,7 @@ export default function CustomerOrdersPage() {
                     <Skeleton className="h-4 w-72 mt-2" />
                 </CardHeader>
                 <CardContent>
-                    {[...Array(3)].map(i => (
+                    {[...Array(3)].map((_, i) => (
                         <div key={i} className="flex justify-between items-center p-4 border-b">
                             <div className="space-y-2">
                                 <Skeleton className="h-5 w-40" />

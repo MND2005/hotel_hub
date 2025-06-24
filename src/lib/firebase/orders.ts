@@ -17,7 +17,8 @@ export async function getOrdersByCustomer(customerId: string): Promise<Order[]> 
         throw new Error(firebaseNotConfiguredError);
     }
     const orders: Order[] = [];
-    const q = query(collection(db, "orders"), where("customerId", "==", customerId), orderBy("orderDate", "desc"));
+    // Removed orderBy to prevent index error. Sorting will be done on the client.
+    const q = query(collection(db, "orders"), where("customerId", "==", customerId));
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
         orders.push({ id: doc.id, ...doc.data() } as Order);
@@ -31,7 +32,8 @@ export async function getOrdersByHotelOwner(ownerId: string): Promise<Order[]> {
     }
     
     const orders: Order[] = [];
-    const q = query(collection(db, "orders"), where("ownerId", "==", ownerId), orderBy("orderDate", "desc"));
+    // Removed orderBy to prevent index error. Sorting will be done on the client.
+    const q = query(collection(db, "orders"), where("ownerId", "==", ownerId));
     
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
