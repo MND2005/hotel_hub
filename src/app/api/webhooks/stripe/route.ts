@@ -3,24 +3,25 @@ import { stripe } from '@/lib/stripe';
 import { headers } from 'next/headers';
 import type { Stripe } from 'stripe';
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
 import type { Order, Hotel } from '@/lib/types';
 
-// Helper function to get hotel details using the Admin SDK
-async function getHotelByAdmin(hotelId: string): Promise<Hotel | null> {
-    if (!adminDb) {
-        console.error('[Webhook] CRITICAL: Firebase Admin SDK is not initialized. Cannot get hotel.');
-        throw new Error("Firebase Admin SDK is not initialized.");
+// Helper function to get hotel details using the client SDK
+async function getHotel(hotelId: string): Promise<Hotel | null> {
+    if (!db) {
+        console.error('[Webhook] CRITICAL: Firebase Client SDK is not initialized. Cannot get hotel.');
+        throw new Error("Firebase Client SDK is not initialized.");
     }
     
-    console.log(`[Webhook] Admin-Getting hotel with ID: ${hotelId}`);
-    const hotelDocRef = adminDb.collection('hotels').doc(hotelId);
-    const hotelDoc = await hotelDocRef.get();
+    console.log(`[Webhook] Client-Getting hotel with ID: ${hotelId}`);
+    const hotelDocRef = doc(db, 'hotels', hotelId);
+    const hotelDoc = await getDoc(hotelDocRef);
 
-    if (hotelDoc.exists) {
+    if (hotelDoc.exists()) {
         const data = hotelDoc.data();
         if (data) {
-            console.log(`[Webhook] Admin-Found hotel: ${data.name}`);
+            console.log(`[Webhook] Client-Found hotel: ${data.name}`);
             return {
                 id: hotelDoc.id,
                 ownerId: data.ownerId,
@@ -34,19 +35,19 @@ async function getHotelByAdmin(hotelId: string): Promise<Hotel | null> {
             } as Hotel;
         }
     }
-    console.log(`[Webhook] Admin-Hotel with ID ${hotelId} not found.`);
+    console.log(`[Webhook] Client-Hotel with ID ${hotelId} not found.`);
     return null;
 }
 
-// Helper function to create an order using the Admin SDK
-async function addOrderByAdmin(orderData: Omit<Order, 'id'>) {
-    if (!adminDb) {
-        console.error('[Webhook] CRITICAL: Firebase Admin SDK is not initialized. Cannot add order.');
-        throw new Error("Firebase Admin SDK is not initialized.");
+// Helper function to create an order using the client SDK
+async function addOrder(orderData: Omit<Order, 'id'>) {
+    if (!db) {
+        console.error('[Webhook] CRITICAL: Firebase Client SDK is not initialized. Cannot add order.');
+        throw new Error("Firebase Client SDK is not initialized.");
     }
-    console.log('[Webhook] Admin-Adding order to Firestore with payload:', orderData);
-    const docRef = await adminDb.collection('orders').add(orderData);
-    console.log(`[Webhook] Admin-Order created with ID: ${docRef.id}`);
+    console.log('[Webhook] Client-Adding order to Firestore with payload:', orderData);
+    const docRef = await addDoc(collection(db, 'orders'), orderData);
+    console.log(`[Webhook] Client-Order created with ID: ${docRef.id}`);
     return docRef.id;
 }
 
@@ -62,8 +63,8 @@ export async function POST(req: Request) {
     return new Response('Webhook secret not configured.', { status: 500 });
   }
   
-  if (!adminDb) {
-      console.error('[Webhook] Firestore admin DB is not available. Cannot process webhook.');
+  if (!db) {
+      console.error('[Webhook] Firestore client DB is not available. Cannot process webhook.');
       return new Response('Internal Server Error: Database connection failed.', { status: 500 });
   }
 
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
 
     try {
         console.log(`[Webhook] Attempting to fetch hotel with ID: ${hotelId}`);
-        const hotel = await getHotelByAdmin(hotelId);
+        const hotel = await getHotel(hotelId);
         
         if (!hotel || !hotel.ownerId) {
             console.error(`[Webhook] CRITICAL: Hotel with ID ${hotelId} not found or has no ownerId.`);
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
         };
 
         console.log('[Webhook] Attempting to create order in Firestore...');
-        await addOrderByAdmin(orderPayload);
+        await addOrder(orderPayload);
         
         console.log(`[Webhook] SUCCESS: Order created in Firestore for user ${userId}.`);
     } catch (error: any) {
