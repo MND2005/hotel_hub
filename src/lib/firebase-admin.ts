@@ -2,28 +2,41 @@
 
 import * as admin from 'firebase-admin';
 
-// This is the one place we use the admin SDK.
-// It is used by the Stripe webhook to create an order in Firestore,
-// bypassing security rules, as the webhook is a trusted server-to-server call.
-
 if (!admin.apps.length) {
+  console.log('[AdminSDK] No existing Firebase admin app, attempting to initialize...');
   try {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-    if (!privateKey) {
-        throw new Error('FIREBASE_PRIVATE_KEY environment variable not set.');
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+
+    if (!privateKey || !projectId || !clientEmail) {
+      throw new Error(
+        'Missing required Firebase admin environment variables (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY).'
+      );
     }
+
     admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        projectId,
+        clientEmail,
         privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
     });
-    console.log('Firebase Admin SDK initialized successfully.');
+    console.log('[AdminSDK] Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
-    console.error('Firebase admin initialization error:', error.stack);
+    console.error(
+      '[AdminSDK] CRITICAL: Firebase admin initialization error:',
+      error.message
+    );
   }
 }
 
-const adminDb = admin.firestore();
+const adminDb = admin.apps.length ? admin.firestore() : null;
+
+if (!adminDb) {
+  console.error(
+    '[AdminSDK] CRITICAL: Firestore admin DB is not available. Orders cannot be saved.'
+  );
+}
+
 export { adminDb };

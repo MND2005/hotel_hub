@@ -5,6 +5,10 @@ import { adminDb } from '@/lib/firebase-admin';
 import type { Hotel } from '@/lib/types';
 
 export async function getHotelByAdmin(hotelId: string): Promise<Hotel | null> {
+    if (!adminDb) {
+        throw new Error("Firebase Admin SDK is not initialized. Cannot get hotel.");
+    }
+    
     const hotelDocRef = adminDb.collection('hotels').doc(hotelId);
     const hotelDoc = await hotelDocRef.get();
 
