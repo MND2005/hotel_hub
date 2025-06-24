@@ -3,59 +3,70 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isOwner(hotelId) {
-      return request.auth != null && exists(/databases/$(database)/documents/hotels/$(hotelId)) &&
-             get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid;
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isTheUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
     
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isRole(userId, role) {
+      if (!isAuthenticated()) {
+        return false;
+      }
+      let userData = getUserData(userId);
+      return userData != null && userData.role == role;
     }
 
     match /users/{userId} {
-      allow read: if true;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
+      allow create: if true;
+      allow read: if isAuthenticated();
+      allow update: if isTheUser(userId);
     }
 
     match /hotels/{hotelId} {
-      allow read: if (resource.data.isOpen == true) || isOwner(hotelId) || (request.auth != null && getUserRole() == 'admin');
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if isOwner(hotelId) || (request.auth != null && getUserRole() == 'admin');
+      allow read: if isAuthenticated();
+      allow create: if isRole(request.auth.uid, 'owner');
+      allow update: if isRole(request.auth.uid, 'admin') || (isRole(request.auth.uid, 'owner') && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid);
 
       match /rooms/{roomId} {
-        allow read: if true;
-        allow create, update, delete: if isOwner(hotelId);
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isRole(request.auth.uid, 'owner') && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid;
       }
 
       match /menuItems/{menuItemId} {
-        allow read: if true;
-        allow create, update, delete: if isOwner(hotelId);
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isRole(request.auth.uid, 'owner') && get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId == request.auth.uid;
       }
     }
 
     match /orders/{orderId} {
-        // Stripe webhook creates orders, so it's an unauthenticated request.
-        // The webhook endpoint is secured by verifying the Stripe signature.
-        allow create: if true;
-        
-        // A customer can read their own orders. An owner can read orders for their hotel. An admin can read any order.
-        allow read: if request.auth != null && (
-            resource.data.customerId == request.auth.uid || isOwner(resource.data.hotelId) || getUserRole() == 'admin'
+      // Allow creation from the unauthenticated webhook by checking for a stripe session ID.
+      // This is a basic security measure to prevent simple anonymous order creation.
+      allow create: if request.resource.data.stripeCheckoutSessionId is string && request.resource.data.stripeCheckoutSessionId.size() > 0;
+
+      // Allow reads if the user is the customer, the owner of the hotel, or an admin.
+      // This rule works for both individual 'get' and 'list' (query) operations.
+      allow read: if isAuthenticated() && (
+          resource.data.customerId == request.auth.uid ||
+          get(/databases/$(database)/documents/hotels/$(resource.data.hotelId)).data.ownerId == request.auth.uid ||
+          isRole(request.auth.uid, 'admin')
         );
 
-        // Orders are immutable
-        allow update, delete: if false; 
+      // Orders are immutable from the client side after creation.
+      allow update, delete: if false;
     }
 
     match /withdrawals/{withdrawalId} {
-      function isWithdrawalOwner() {
-        return request.auth != null && resource.data.ownerId == request.auth.uid;
-      }
-      
-      allow read, list: if isWithdrawalOwner() || (request.auth != null && getUserRole() == 'admin');
-      allow create: if request.auth.uid == request.resource.data.ownerId;
-      allow update: if request.auth != null && getUserRole() == 'admin';
+      allow read: if isRole(request.auth.uid, 'admin') || (isRole(request.auth.uid, 'owner') && resource.data.ownerId == request.auth.uid);
+      allow create: if isRole(request.auth.uid, 'owner');
+      allow update: if isRole(request.auth.uid, 'admin');
+      allow delete: if false;
     }
   }
 }
