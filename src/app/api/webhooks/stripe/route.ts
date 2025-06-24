@@ -7,6 +7,7 @@ import { addOrder } from '@/lib/firebase/orders';
 import { getHotel } from '@/lib/firebase/hotels';
 
 export async function POST(req: Request) {
+  console.log('--- Stripe webhook received ---');
   const body = await req.text();
   const signature = headers().get('Stripe-Signature') as string;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
   const session = event.data.object as Stripe.Checkout.Session;
 
   if (event.type === 'checkout.session.completed') {
+    console.log('Processing checkout.session.completed event...');
     if (!session?.metadata?.userId) {
         console.error('User ID not found in session metadata.');
         return new Response('User ID not found in session metadata.', { status: 400 });
@@ -53,6 +55,7 @@ export async function POST(req: Request) {
             type,
             stripeCheckoutSessionId: session.id,
         });
+        console.log(`Order created successfully for user ${userId}`);
     } catch (error) {
         console.error('Failed to create order in database', error);
         return new Response('Failed to create order in database', { status: 500 });
