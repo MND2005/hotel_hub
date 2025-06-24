@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import type { Stripe } from 'stripe';
 import { NextResponse } from 'next/server';
 import { addOrderByAdmin } from '@/lib/firebase/orders-admin';
-import { getHotel } from '@/lib/firebase/hotels';
+import { getHotelByAdmin } from '@/lib/firebase/hotels-admin';
 
 export async function POST(req: Request) {
   console.log('--- Stripe webhook received ---');
@@ -25,9 +25,9 @@ export async function POST(req: Request) {
 
   if (event.type === 'checkout.session.completed') {
     console.log('Processing checkout.session.completed event...');
-    if (!session?.metadata?.userId) {
-        console.error('User ID not found in session metadata.');
-        return new Response('User ID not found in session metadata.', { status: 400 });
+    if (!session?.metadata?.userId || !session?.metadata?.hotelId) {
+        console.error('User ID or Hotel ID not found in session metadata.');
+        return new Response('User ID or Hotel ID not found in session metadata.', { status: 400 });
     }
     
     const userId = session.metadata.userId;
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const type = session.metadata.type as 'room' | 'food' | 'combined';
 
     try {
-        const hotel = await getHotel(hotelId);
+        const hotel = await getHotelByAdmin(hotelId);
         if (!hotel) {
             console.error(`Webhook Error: Hotel with ID ${hotelId} not found.`);
             return new Response(`Webhook Error: Hotel not found`, { status: 400 });
