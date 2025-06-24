@@ -41,7 +41,7 @@ export function CustomerHeader() {
         <div className="mr-4 hidden md:flex">
           <Link href="/customer" className="mr-6 flex items-center space-x-2">
             <span className="font-bold text-primary sm:inline-block">
-              Tri-Sided Hub
+              Cosmo SL
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
