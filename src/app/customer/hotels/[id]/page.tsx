@@ -25,6 +25,8 @@ import { HotelCardImage } from "@/components/app/hotel-card-image";
 import { loadStripe } from '@stripe/stripe-js';
 import { createCheckoutSession } from './actions';
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -77,6 +79,15 @@ export default function HotelDetailPage() {
   // Cart state
   const [bookedRoom, setBookedRoom] = useState<Room | null>(null);
   const [foodOrder, setFoodOrder] = useState<Record<string, { item: MenuItem, quantity: number }>>({});
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -138,8 +149,18 @@ export default function HotelDetailPage() {
 
   const handleCheckout = () => {
     startTransition(async () => {
+        if (!user) {
+            toast({
+                title: "Authentication Error",
+                description: "You must be logged in to make a purchase.",
+                variant: "destructive"
+            });
+            router.push('/login');
+            return;
+        }
+
         try {
-            const { sessionId } = await createCheckoutSession(hotelId, bookedRoom, foodOrder);
+            const { sessionId } = await createCheckoutSession(user.uid, hotelId, bookedRoom, foodOrder);
             const stripe = await stripePromise;
             if (!stripe) throw new Error('Stripe.js has not loaded yet.');
             

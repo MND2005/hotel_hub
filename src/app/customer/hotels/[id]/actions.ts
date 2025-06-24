@@ -2,17 +2,16 @@
 'use server';
 
 import { stripe } from '@/lib/stripe';
-import { auth } from '@/lib/firebase';
 import { headers } from 'next/headers';
 import type { Room, MenuItem } from '@/lib/types';
 
 export async function createCheckoutSession(
+    userId: string,
     hotelId: string,
     bookedRoom: Room | null, 
     foodOrder: Record<string, { item: MenuItem, quantity: number }>
  ) {
-    const user = auth.currentUser;
-    if (!user) {
+    if (!userId) {
         throw new Error('You must be logged in to make a purchase.');
     }
 
@@ -69,7 +68,7 @@ export async function createCheckoutSession(
         success_url: `${appUrl}/customer/payment/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${appUrl}/customer/hotels/${hotelId}`,
         metadata: {
-            userId: user.uid,
+            userId: userId,
             hotelId,
             items: JSON.stringify(orderItems),
             type: orderType,
