@@ -11,87 +11,91 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import { MapPin, LocateFixed } from "lucide-react";
 import Map from "@/components/app/map";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { getAllHotels } from "@/lib/firebase/hotels";
 import type { Hotel } from "@/lib/types";
 import { getDistance } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HotelCardImage } from '@/components/app/hotel-card-image';
+import { useToast } from '@/hooks/use-toast';
 
-type HotelWithDistance = Hotel & { distance: number };
+type HotelWithDistance = Hotel & { distance?: number };
 
 export default function CustomerExplorePage() {
   const [hotels, setHotels] = useState<HotelWithDistance[]>([]);
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLocating, startLocating] = useTransition();
+  const { toast } = useToast();
 
   const sriLankaCenter = { lat: 7.8731, lng: 80.7718 };
 
   useEffect(() => {
-    const fetchHotelsAndLocation = async () => {
+    const fetchHotels = async () => {
       setLoading(true);
       setError(null);
-
-      const locationPromise = new Promise<{ lat: number; lng: number }>((resolve) => {
-        if (!navigator.geolocation) {
-          setError("Geolocation is not supported by your browser.");
-          resolve(sriLankaCenter);
-        } else {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              resolve({
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-              });
-            },
-            (err) => {
-              console.warn(`Geolocation Error (${err.code}): ${err.message}`);
-              let message = "Unable to retrieve your location. Showing hotels across Sri Lanka.";
-              if (err.code === err.PERMISSION_DENIED) {
-                 message = "Location access was denied. Please enable it in your browser settings to see nearby hotels.";
-              }
-              setError(message);
-              resolve(sriLankaCenter);
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          );
-        }
-      });
-      
-      const location = await locationPromise;
-      setUserLocation(location);
+      try {
+        const allHotels = await getAllHotels();
+        // Sort alphabetically by default
+        setHotels(allHotels.sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (dbError) {
+        console.error("Error fetching hotels:", dbError);
+        setError("Could not fetch hotel data.");
+      } finally {
+        setLoading(false);
+      }
     };
-
-    fetchHotelsAndLocation();
+    fetchHotels();
   }, []);
 
-  useEffect(() => {
-    if (!userLocation) return;
+  const handleSortByDistance = () => {
+    startLocating(() => {
+      if (!navigator.geolocation) {
+        toast({
+          variant: "destructive",
+          title: "Geolocation Error",
+          description: "Geolocation is not supported by your browser.",
+        });
+        return;
+      }
 
-    const fetchAndSortHotels = async () => {
-        try {
-            const allHotels = await getAllHotels();
-            const hotelsWithDistance = allHotels.map(hotel => ({
-                ...hotel,
-                distance: getDistance(userLocation.lat, userLocation.lng, hotel.latitude, hotel.longitude)
-            })).sort((a, b) => a.distance - b.distance);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setUserLocation(location);
 
-            setHotels(hotelsWithDistance);
-        } catch (dbError) {
-            console.error("Error fetching hotels:", dbError);
-            setError("Could not fetch hotel data.");
-        } finally {
-            setLoading(false);
-        }
-    };
+          const hotelsWithDistance = [...hotels].map(hotel => ({
+            ...hotel,
+            distance: getDistance(location.lat, location.lng, hotel.latitude, hotel.longitude)
+          })).sort((a, b) => a.distance! - b.distance!);
 
-    fetchAndSortHotels();
-
-  }, [userLocation]);
-
+          setHotels(hotelsWithDistance);
+          toast({
+            title: "Location Found",
+            description: "Hotels sorted by distance from you.",
+          });
+        },
+        (err) => {
+          let message = "Could not retrieve your location.";
+          if (err.code === err.PERMISSION_DENIED) {
+            message = "Location access was denied. Please enable it in your browser settings.";
+          }
+          toast({
+            variant: "destructive",
+            title: "Geolocation Error",
+            description: message,
+          });
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  };
 
   if (loading) {
     return (
@@ -126,21 +130,29 @@ export default function CustomerExplorePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="space-y-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Find Your Stay</h1>
-        <p className="text-muted-foreground">
-          {error ? error : "Explore hotels near you for room bookings and food orders."}
-        </p>
+      <div className="space-y-2 mb-8 flex justify-between items-center">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Find Your Stay</h1>
+            <p className="text-muted-foreground">
+                {userLocation ? "Showing hotels sorted by distance." : "Explore hotels for room bookings and food orders."}
+            </p>
+        </div>
+        <Button onClick={handleSortByDistance} disabled={isLocating}>
+            <LocateFixed className="mr-2 h-4 w-4" />
+            {isLocating ? 'Locating...' : 'Sort by Distance'}
+        </Button>
       </div>
+
+      {error && <p className="text-destructive mb-4">{error}</p>}
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-3">
             <Map 
               className="overflow-hidden h-[500px]" 
               center={userLocation || sriLankaCenter}
-              zoom={userLocation && !error ? 13 : 8}
+              zoom={userLocation ? 13 : 8}
               markers={[
-                ...(userLocation && !error
+                ...(userLocation
                   ? [{ lat: userLocation.lat, lng: userLocation.lng, name: 'Your Location' }]
                   : []),
                 ...hotels.map(h => ({ lat: h.latitude, lng: h.longitude, name: h.name })),
@@ -149,11 +161,11 @@ export default function CustomerExplorePage() {
         </div>
 
         <div className="lg:col-span-3 mt-8">
-            <h2 className="text-2xl font-bold tracking-tight mb-4">Hotels Near You</h2>
+            <h2 className="text-2xl font-bold tracking-tight mb-4">{userLocation ? "Hotels Near You" : "All Hotels"}</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {hotels.length === 0 ? (
                     <div className="lg:col-span-4 text-center text-muted-foreground py-10">
-                        No hotels found near you.
+                        No hotels found.
                     </div>
                 ) : hotels.map((hotel) => (
                     <Card key={hotel.id} className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
@@ -164,7 +176,9 @@ export default function CustomerExplorePage() {
                             <CardContent className="p-4">
                                 <div className="flex justify-between items-center mb-2">
                                 <CardTitle className="text-lg truncate">{hotel.name}</CardTitle>
-                                <Badge variant="secondary">{hotel.distance.toFixed(1)} km</Badge>
+                                {typeof hotel.distance === 'number' && (
+                                    <Badge variant="secondary">{hotel.distance.toFixed(1)} km</Badge>
+                                )}
                                 </div>
                                 <p className="flex items-center text-sm text-muted-foreground">
                                   <MapPin className="w-4 h-4 mr-1 shrink-0" />
