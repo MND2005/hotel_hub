@@ -10,15 +10,16 @@ import type { Order } from '@/lib/types';
 
 
 export async function POST(req: Request) {
+  // Check for required Stripe environment variables
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {
+    console.error('[Webhook] ERROR: Stripe environment variables (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) are not set.');
+    return new Response('Webhook secret not configured.', { status: 500 });
+  }
+
   console.log('--- [Webhook] Stripe event received ---');
   const body = await req.text();
   const signature = headers().get('Stripe-Signature') as string;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    console.error('[Webhook] STRIPE_WEBHOOK_SECRET is not set.');
-    return new Response('Webhook secret not configured.', { status: 500 });
-  }
   
   if (!db) {
       console.error('[Webhook] Firestore client DB is not available. Cannot process webhook.');

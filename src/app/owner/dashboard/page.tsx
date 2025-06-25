@@ -24,15 +24,13 @@ import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { getOrdersByHotelOwner } from "@/lib/firebase/orders";
-import { getAllUsers } from "@/lib/firebase/users";
-import type { Order, User } from '@/lib/types';
+import type { Order } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from 'date-fns';
 
 export default function OwnerDashboard() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -49,14 +47,9 @@ export default function OwnerDashboard() {
     const fetchData = async (ownerId: string) => {
       setLoading(true);
       try {
-        const [ordersData, usersData] = await Promise.all([
-          getOrdersByHotelOwner(ownerId),
-          getAllUsers(),
-        ]);
-        // Sort orders by date on the client side
+        const ordersData = await getOrdersByHotelOwner(ownerId);
         ordersData.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
         setOrders(ordersData);
-        setAllUsers(usersData);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -67,7 +60,6 @@ export default function OwnerDashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  const userMap = new Map(allUsers.map(u => [u.id, u.name]));
 
   const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
   const bookings = orders.filter(o => o.type === 'room' || o.type === 'combined').length;
@@ -175,7 +167,7 @@ export default function OwnerDashboard() {
                                 recentOrders.map((order) => (
                                     <TableRow key={order.id}>
                                     <TableCell>
-                                        <div className="font-medium">{userMap.get(order.customerId) || 'Unknown'}</div>
+                                        <div className="font-medium truncate max-w-[120px]" title={order.customerId}>{`Cust: ${order.customerId.substring(0,8)}...`}</div>
                                         <div className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(order.orderDate), { addSuffix: true })}</div>
                                     </TableCell>
                                     <TableCell>
