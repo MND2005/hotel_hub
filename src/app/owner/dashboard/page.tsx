@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Activity, BedDouble, Utensils, Landmark } from "lucide-react";
+import { Activity, DollarSign, Landmark, ShoppingCart } from "lucide-react";
 import { IncomeChart } from '@/components/owner/income-chart';
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
@@ -70,8 +70,7 @@ export default function OwnerDashboard() {
 
 
   const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
-  const bookings = orders.filter(o => o.type === 'room' || o.type === 'combined').length;
-  const foodOrders = orders.filter(o => o.type === 'food' || o.type === 'combined').length;
+  const totalOrders = orders.length;
   
   const totalWithdrawn = withdrawals
     .filter(w => w.status === 'approved')
@@ -85,9 +84,9 @@ export default function OwnerDashboard() {
 
   const stats = [
     { title: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: Activity },
-    { title: "Withdrawable Balance", value: `$${withdrawableBalance.toFixed(2)}`, icon: Landmark },
-    { title: "Bookings", value: bookings.toString(), icon: BedDouble },
-    { title: "Food Orders", value: foodOrders.toString(), icon: Utensils },
+    { title: "Total Withdrawn", value: `$${totalWithdrawn.toFixed(2)}`, icon: Landmark },
+    { title: "Withdrawable Balance", value: `$${withdrawableBalance.toFixed(2)}`, icon: DollarSign },
+    { title: "Total Orders", value: totalOrders.toString(), icon: ShoppingCart },
   ];
 
   const recentOrders = orders.slice(0, 5);
