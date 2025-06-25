@@ -27,7 +27,7 @@ import { getOrdersByHotelOwner } from "@/lib/firebase/orders";
 import { getWithdrawalsByOwner } from "@/lib/firebase/withdrawals";
 import type { Order, Withdrawal } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -83,10 +83,7 @@ export default function OwnerDashboard() {
   const withdrawableBalance = totalRevenue - totalWithdrawn - pendingWithdrawals;
 
   const chartData = useMemo(() => {
-    if (orders.length === 0) return [];
-    
     const monthlyRevenue: { [key: string]: number } = {};
-
     orders.forEach(order => {
       const monthKey = format(new Date(order.orderDate), 'yyyy-MM');
       if (!monthlyRevenue[monthKey]) {
@@ -94,13 +91,21 @@ export default function OwnerDashboard() {
       }
       monthlyRevenue[monthKey] += order.total;
     });
+    
+    const lastFiveMonths = [];
+    const today = new Date();
+    for (let i = 4; i >= 0; i--) {
+        const month = subMonths(today, i);
+        lastFiveMonths.push({
+            name: format(month, 'MMM'),
+            key: format(month, 'yyyy-MM'),
+        });
+    }
 
-    const sortedMonths = Object.keys(monthlyRevenue).sort();
-
-    return sortedMonths.map(monthKey => ({
-      name: format(new Date(`${monthKey}-02`), 'MMM'),
-      total: monthlyRevenue[monthKey],
-    })).slice(-12);
+    return lastFiveMonths.map(month => ({
+        name: month.name,
+        total: monthlyRevenue[month.key] || 0,
+    }));
   }, [orders]);
 
   const stats = [
