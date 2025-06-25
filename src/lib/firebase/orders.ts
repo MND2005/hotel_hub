@@ -1,7 +1,7 @@
 
 import { db } from '@/lib/firebase';
 import { firebaseNotConfiguredError } from './auth';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 
 // This function uses the CLIENT SDK and is subject to security rules.
@@ -52,4 +52,18 @@ export async function getAllOrders(): Promise<Order[]> {
         orders.push({ id: doc.id, ...doc.data() } as Order);
     });
     return orders;
+}
+
+export async function getOrderById(orderId: string): Promise<Order | null> {
+    if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+    }
+    const orderDocRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderDocRef);
+
+    if (orderDoc.exists()) {
+        return { id: orderDoc.id, ...orderDoc.data() } as Order;
+    }
+
+    return null;
 }

@@ -28,6 +28,8 @@ import { getWithdrawalsByOwner } from "@/lib/firebase/withdrawals";
 import type { Order, Withdrawal } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from 'date-fns';
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function OwnerDashboard() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -169,12 +171,13 @@ export default function OwnerDashboard() {
                                 <TableHead>Type</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Amount</TableHead>
+                                <TableHead><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                              {recentOrders.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         No recent orders.
                                     </TableCell>
                                 </TableRow>
@@ -192,6 +195,11 @@ export default function OwnerDashboard() {
                                         <Badge variant={order.status === 'completed' ? 'default' : order.status === 'confirmed' ? 'secondary' : 'destructive'} className="capitalize">{order.status}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button asChild variant="ghost" size="sm">
+                                            <Link href={`/owner/orders/${order.id}`}>View</Link>
+                                        </Button>
+                                    </TableCell>
                                     </TableRow>
                                 ))
                              )}

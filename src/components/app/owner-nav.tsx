@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Hotel, DollarSign, LogOut } from 'lucide-react';
+import { Home, Hotel, DollarSign, LogOut, ShoppingBag } from 'lucide-react';
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 const links = [
   { href: '/owner/dashboard', label: 'Dashboard', icon: Home },
   { href: '/owner/hotels', label: 'My Hotels', icon: Hotel },
+  { href: '/owner/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/owner/withdrawals', label: 'Withdrawals', icon: DollarSign },
 ];
 
