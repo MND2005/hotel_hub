@@ -1,11 +1,14 @@
+
 'use client';
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const data: any[] = [];
+type IncomeChartProps = {
+  data: { name: string; total: number }[];
+};
 
-export function IncomeChart() {
+export function IncomeChart({ data }: IncomeChartProps) {
   return (
     <Card>
         <CardHeader>

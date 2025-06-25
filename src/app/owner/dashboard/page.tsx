@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Activity, DollarSign, Landmark, ShoppingCart } from "lucide-react";
 import { IncomeChart } from '@/components/owner/income-chart';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
@@ -27,7 +27,7 @@ import { getOrdersByHotelOwner } from "@/lib/firebase/orders";
 import { getWithdrawalsByOwner } from "@/lib/firebase/withdrawals";
 import type { Order, Withdrawal } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -82,6 +82,27 @@ export default function OwnerDashboard() {
 
   const withdrawableBalance = totalRevenue - totalWithdrawn - pendingWithdrawals;
 
+  const chartData = useMemo(() => {
+    if (orders.length === 0) return [];
+    
+    const monthlyRevenue: { [key: string]: number } = {};
+
+    orders.forEach(order => {
+      const monthKey = format(new Date(order.orderDate), 'yyyy-MM');
+      if (!monthlyRevenue[monthKey]) {
+        monthlyRevenue[monthKey] = 0;
+      }
+      monthlyRevenue[monthKey] += order.total;
+    });
+
+    const sortedMonths = Object.keys(monthlyRevenue).sort();
+
+    return sortedMonths.map(monthKey => ({
+      name: format(new Date(`${monthKey}-02`), 'MMM'),
+      total: monthlyRevenue[monthKey],
+    })).slice(-12);
+  }, [orders]);
+
   const stats = [
     { title: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: Activity },
     { title: "Total Withdrawn", value: `$${totalWithdrawn.toFixed(2)}`, icon: Landmark },
@@ -109,7 +130,7 @@ export default function OwnerDashboard() {
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
             <div className="lg:col-span-4">
-                <IncomeChart />
+                <IncomeChart data={[]} />
             </div>
             <div className="lg:col-span-3">
                 <Card>
@@ -154,7 +175,7 @@ export default function OwnerDashboard() {
       </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         <div className="lg:col-span-4">
-            <IncomeChart />
+            <IncomeChart data={chartData} />
         </div>
         <div className="lg:col-span-3">
             <Card>
