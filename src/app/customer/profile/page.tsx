@@ -1,6 +1,9 @@
 
 'use client';
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,6 +13,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,12 +35,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { getUser } from "@/lib/firebase/users";
+import { getUser, updateUser } from "@/lib/firebase/users";
 import type { User, Order } from "@/lib/types";
 import { getOrdersByCustomer } from "@/lib/firebase/orders";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
+
+const profileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+});
 
 export default function CustomerProfilePage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -37,6 +52,13 @@ export default function CustomerProfilePage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  const form = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -49,7 +71,9 @@ export default function CustomerProfilePage() {
             getOrdersByCustomer(currentUser.uid)
           ]);
           setUserData(dbUser);
-          // Sort orders by date on the client side
+          if (dbUser) {
+            form.reset({ name: dbUser.name });
+          }
           userOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
           setOrders(userOrders);
         } catch (error) {
@@ -63,7 +87,23 @@ export default function CustomerProfilePage() {
       }
     });
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, form]);
+
+  async function onSubmit(values: z.infer<typeof profileSchema>) {
+    if (!user) {
+      toast({ title: 'Error', description: 'You must be logged in to update your profile.', variant: 'destructive' });
+      return;
+    }
+    try {
+      await updateUser(user.uid, { name: values.name });
+      toast({ title: 'Success!', description: 'Your profile has been updated successfully.' });
+      setUserData(prev => prev ? { ...prev, name: values.name } : null);
+      form.reset(values);
+    } catch (error) {
+      console.error("Profile update failed:", error);
+      toast({ title: 'Update Failed', description: 'Could not update your profile. Please try again.', variant: 'destructive' });
+    }
+  }
 
   if (loading) {
     return (
@@ -105,29 +145,45 @@ export default function CustomerProfilePage() {
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-3">
             <div className="md:col-span-1">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>My Profile</CardTitle>
-                        <CardDescription>Your personal information.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input id="name" defaultValue={userData?.name || ''} disabled />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" defaultValue={userData?.email || ''} disabled />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Button variant="outline" className="w-full" disabled>Change Password</Button>
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button disabled>Save Changes</Button>
-                    </CardFooter>
-                </Card>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>My Profile</CardTitle>
+                            <CardDescription>Update your personal information.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Your name" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input id="email" type="email" defaultValue={userData?.email || ''} disabled />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Button variant="outline" className="w-full" disabled>Change Password</Button>
+                                <p className="text-xs text-muted-foreground">Password changes are not yet supported.</p>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>
+                                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </form>
+              </Form>
             </div>
             <div className="md:col-span-2">
                 <Card>
