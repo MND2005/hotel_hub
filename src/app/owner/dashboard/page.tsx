@@ -17,20 +17,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Users, BedDouble, Utensils } from "lucide-react";
+import { Activity, BedDouble, Utensils, Landmark } from "lucide-react";
 import { IncomeChart } from '@/components/owner/income-chart';
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { getOrdersByHotelOwner } from "@/lib/firebase/orders";
-import type { Order } from '@/lib/types';
+import { getWithdrawalsByOwner } from "@/lib/firebase/withdrawals";
+import type { Order, Withdrawal } from '@/lib/types';
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from 'date-fns';
 
 export default function OwnerDashboard() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -47,9 +49,13 @@ export default function OwnerDashboard() {
     const fetchData = async (ownerId: string) => {
       setLoading(true);
       try {
-        const ordersData = await getOrdersByHotelOwner(ownerId);
+        const [ordersData, withdrawalsData] = await Promise.all([
+          getOrdersByHotelOwner(ownerId),
+          getWithdrawalsByOwner(ownerId),
+        ]);
         ordersData.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
         setOrders(ordersData);
+        setWithdrawals(withdrawalsData);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -64,13 +70,22 @@ export default function OwnerDashboard() {
   const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
   const bookings = orders.filter(o => o.type === 'room' || o.type === 'combined').length;
   const foodOrders = orders.filter(o => o.type === 'food' || o.type === 'combined').length;
-  const uniqueCustomers = new Set(orders.map(o => o.customerId)).size;
+  
+  const totalWithdrawn = withdrawals
+    .filter(w => w.status === 'approved')
+    .reduce((acc, w) => acc + w.amount, 0);
+
+  const pendingWithdrawals = withdrawals
+    .filter(w => w.status === 'pending')
+    .reduce((acc, w) => acc + w.amount, 0);
+
+  const withdrawableBalance = totalRevenue - totalWithdrawn - pendingWithdrawals;
 
   const stats = [
     { title: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: Activity },
+    { title: "Withdrawable Balance", value: `$${withdrawableBalance.toFixed(2)}`, icon: Landmark },
     { title: "Bookings", value: bookings.toString(), icon: BedDouble },
     { title: "Food Orders", value: foodOrders.toString(), icon: Utensils },
-    { title: "Customers", value: uniqueCustomers.toString(), icon: Users },
   ];
 
   const recentOrders = orders.slice(0, 5);
