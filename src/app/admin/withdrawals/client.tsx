@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Withdrawal } from "@/lib/types";
-import { updateWithdrawalStatus } from "./actions";
+import { updateWithdrawalStatus } from "@/lib/firebase/withdrawals";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useTransition } from "react";
