@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,7 +82,7 @@ export default function LoginPage() {
       if (error.message === firebaseNotConfiguredError || error?.code === 'auth/invalid-api-key') {
         description = firebaseNotConfiguredError;
       } else if (error?.code === 'auth/invalid-credential') {
-        description = "Invalid email or password. Please try again.";
+        description = "The email or password you entered is incorrect. Please double-check your credentials and try again.";
       } else if (error?.code === 'auth/configuration-not-found') {
         description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";
       } else if (error.message === "User data not found in Firestore.") {
