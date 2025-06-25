@@ -1,73 +1,77 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    function requestingUid() {
-      return request.auth.uid;
-    }
-
-    function isRequestingUser(uid) {
-      return isAuth() && requestingUid() == uid;
-    }
-
-    function getUserData(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data;
-    }
-
-    function isRole(role) {
-      return isAuth() && getUserData(requestingUid()).role == role;
-    }
-
-    function isAdmin() {
-      return isRole('admin');
-    }
-
-    function isOwner() {
-      return isRole('owner');
-    }
-
-    // --- Collection Rules ---
-
+    // A user can read their own user document.
+    // An admin can read any user document.
     match /users/{userId} {
-      allow get: if isRequestingUser(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAuth();
-      allow update: if isRequestingUser(userId) || isAdmin();
+      allow read: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create: if request.auth.uid != null;
+      // Users can only update their own document.
+      allow update: if request.auth.uid == userId;
     }
-    
+
+    // Hotels can be read by anyone if they are open.
+    // Owners can read their own hotels, regardless of status.
+    // Admins can read any hotel, regardless of status.
     match /hotels/{hotelId} {
-      allow get: if resource.data.isOpen == true || isAdmin() || isRequestingUser(resource.data.ownerId);
-      allow list: if isAdmin();
+      allow read: if resource.data.isOpen == true || 
+                   (request.auth != null && (request.auth.uid == resource.data.ownerId || 
+                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
       
-      allow create: if isOwner() && isRequestingUser(request.resource.data.ownerId);
-      allow update: if isAdmin() || isRequestingUser(resource.data.ownerId);
+      // Admins and authenticated users can list hotels. Customer page needs this.
+      allow list: if request.auth != null || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       
-      match /{subcollection}/{docId=**} {
-        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || isAdmin() || isRequestingUser(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-        allow create, update, delete: if isAdmin() || isRequestingUser(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-      }
+      // Only authenticated users who are the owner can create a hotel.
+      allow create: if request.auth.uid == request.resource.data.ownerId;
+      
+      // The owner or an admin can update a hotel.
+      allow update: if (request.auth != null && (request.auth.uid == resource.data.ownerId || 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
-    
+
+    // Rules for hotel subcollections (rooms, menuItems)
+    match /hotels/{hotelId}/{subcollection}/{docId} {
+      // Must be able to read the parent hotel to read subcollection items.
+      allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || 
+                   (request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId || 
+                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+
+      // Only the hotel owner can create items in subcollections.
+      allow create: if request.auth.uid == get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId;
+      
+      // Only the hotel owner can update/delete items.
+      allow update, delete: if request.auth.uid == get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId;
+    }
+
+    // Orders can be read by the customer, the hotel owner, or an admin.
     match /orders/{orderId} {
-      allow get: if isAdmin() || isRequestingUser(resource.data.customerId) || isRequestingUser(resource.data.ownerId);
-      allow list: if isAdmin();
-      allow create: if isRequestingUser(request.resource.data.customerId);
-    }
-    
-    match /withdrawals/{withdrawalId} {
-      allow list: if isAdmin();
-      allow get: if isAdmin() || isRequestingUser(resource.data.ownerId);
-      allow create: if isOwner() && isRequestingUser(request.resource.data.ownerId);
+      allow read: if request.auth != null && (request.auth.uid == resource.data.customerId || 
+                   request.auth.uid == resource.data.ownerId || 
+                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       
-      // Admin can update status and processedDate. No other fields can be changed.
-      allow update: if isAdmin() &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']);
+      // Orders are created by the server webhook, which is unauthenticated.
+      allow create: if true;
+      
+      // The owner or an admin can update an order.
+      allow update: if request.auth != null && (request.auth.uid == resource.data.ownerId || 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    // Withdrawals
+    match /withdrawals/{withdrawalId} {
+      // Can be read by the owner or an admin.
+      allow read: if request.auth != null && (request.auth.uid == resource.data.ownerId || 
+                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      
+      // Can only be created by the owner.
+      allow create: if request.auth.uid == request.resource.data.ownerId;
+      
+      // Can only be updated by an admin, and only the status/processedDate fields.
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']);
     }
   }
 }
