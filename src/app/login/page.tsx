@@ -82,7 +82,7 @@ export default function LoginPage() {
       if (error.message === firebaseNotConfiguredError || error?.code === 'auth/invalid-api-key') {
         description = firebaseNotConfiguredError;
       } else if (error?.code === 'auth/invalid-credential') {
-        description = "The email or password you entered is incorrect. Please double-check your credentials and try again.";
+        description = "Invalid credentials. Please check your email and password and try again.";
       } else if (error?.code === 'auth/configuration-not-found') {
         description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";
       } else if (error.message === "User data not found in Firestore.") {
