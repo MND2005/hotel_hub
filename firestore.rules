@@ -2,79 +2,72 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to get the role of the currently authenticated user.
-    function getRole() {
-      // Access the user's document in the 'users' collection using their UID.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    // Helper function to check if the requesting user is the owner of a document.
-    function isOwner(userId) {
-      // Ensure the user is authenticated and their UID matches the provided userId.
-      return request.auth != null && request.auth.uid == userId;
+
+    // --- Helper Functions ---
+    function isAuth() {
+      return request.auth != null;
     }
 
-    // Rules for the 'users' collection.
+    function requestingUid() {
+      return request.auth.uid;
+    }
+
+    function isRequestingUser(uid) {
+      return isAuth() && requestingUid() == uid;
+    }
+
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function isRole(role) {
+      return isAuth() && getUserData(requestingUid()).role == role;
+    }
+
+    function isAdmin() {
+      return isRole('admin');
+    }
+
+    function isOwner() {
+      return isRole('owner');
+    }
+
+    // --- Collection Rules ---
+
     match /users/{userId} {
-      // An admin can read any user profile. A user can only read/update their own.
-      allow read, update: if isOwner(userId) || getRole() == 'admin';
-      
-      // Any authenticated user can have a user document created for them (handled by backend).
-      allow create: if request.auth != null;
+      allow get: if isRequestingUser(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAuth();
+      allow update: if isRequestingUser(userId) || isAdmin();
     }
-
-    // Rules for the 'hotels' collection and its sub-collections.
+    
     match /hotels/{hotelId} {
-      // Any user can read a hotel if it's open. Admins and the owner can always read it.
-      allow read: if resource.data.isOpen == true || getRole() == 'admin' || isOwner(resource.data.ownerId);
+      allow get: if resource.data.isOpen == true || isAdmin() || isRequestingUser(resource.data.ownerId);
+      allow list: if isAdmin();
       
-      // Only users with the 'owner' role can create a hotel.
-      allow create: if getRole() == 'owner' && isOwner(request.resource.data.ownerId);
+      allow create: if isOwner() && isRequestingUser(request.resource.data.ownerId);
+      allow update: if isAdmin() || isRequestingUser(resource.data.ownerId);
       
-      // Only an admin or the hotel owner can update hotel details.
-      allow update: if getRole() == 'admin' || isOwner(resource.data.ownerId);
-
-      // Rules for 'rooms' sub-collection within a hotel.
-      match /rooms/{roomId} {
-        // Read permission depends on the parent hotel's status.
-        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || getRole() == 'admin' || isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-        // Only the hotel owner can manage rooms.
-        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-      }
-
-      // Rules for 'menuItems' sub-collection within a hotel.
-      match /menuItems/{menuItemId} {
-        // Read permission depends on the parent hotel's status.
-        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || getRole() == 'admin' || isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-        // Only the hotel owner can manage menu items.
-        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
+      match /{subcollection}/{docId=**} {
+        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || isAdmin() || isRequestingUser(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
+        allow create, update, delete: if isAdmin() || isRequestingUser(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
       }
     }
-
-    // Rules for the 'orders' collection.
+    
     match /orders/{orderId} {
-      // The customer, owner, or an admin can view an order.
-      allow read: if isOwner(resource.data.customerId) || isOwner(resource.data.ownerId) || getRole() == 'admin';
-      
-      // For now, allow any authenticated user to create an order.
-      // This is to unblock the payment flow. A more secure implementation would use the Admin SDK.
-      allow create: if request.auth != null;
-      
-      // Only the owner or an admin can update an order's status.
-      allow update: if isOwner(resource.data.ownerId) || getRole() == 'admin';
+      allow get: if isAdmin() || isRequestingUser(resource.data.customerId) || isRequestingUser(resource.data.ownerId);
+      allow list: if isAdmin();
+      allow create: if isRequestingUser(request.resource.data.customerId);
     }
-
-    // Rules for the 'withdrawals' collection.
+    
     match /withdrawals/{withdrawalId} {
-      // An admin can read all withdrawals. An owner can only read their own.
-      allow read: if getRole() == 'admin' || isOwner(resource.data.ownerId);
+      allow list: if isAdmin();
+      allow get: if isAdmin() || isRequestingUser(resource.data.ownerId);
+      allow create: if isOwner() && isRequestingUser(request.resource.data.ownerId);
       
-      // An owner can create a withdrawal request for themselves.
-      allow create: if getRole() == 'owner' && isOwner(request.resource.data.ownerId);
-      
-      // Only an admin can update (approve/deny) a withdrawal request.
-      allow update: if getRole() == 'admin';
+      // Admin can update status and processedDate. No other fields can be changed.
+      allow update: if isAdmin() &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']);
     }
   }
 }
