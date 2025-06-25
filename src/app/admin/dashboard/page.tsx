@@ -16,13 +16,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, DollarSign, Activity, Landmark } from "lucide-react";
+import { Users, DollarSign, Activity, Landmark, Hotel, ShoppingCart, HelpCircle } from "lucide-react";
 import { getAllUsers } from "@/lib/firebase/users";
 import { getAllWithdrawals } from "@/lib/firebase/withdrawals";
 import { getAllOrders } from "@/lib/firebase/orders";
+import { getAllHotelsForAdmin } from "@/lib/firebase/hotels";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect } from "react";
-import type { User, Withdrawal, Order } from "@/lib/types";
+import type { User, Withdrawal, Order, Hotel as HotelType } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -32,6 +33,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [hotels, setHotels] = useState<HotelType[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -40,14 +42,16 @@ export default function AdminDashboard() {
       if (user) {
         const fetchData = async () => {
           try {
-            const [usersData, withdrawalsData, ordersData] = await Promise.all([
+            const [usersData, withdrawalsData, ordersData, hotelsData] = await Promise.all([
               getAllUsers(),
               getAllWithdrawals(),
               getAllOrders(),
+              getAllHotelsForAdmin(),
             ]);
             setUsers(usersData);
             setWithdrawals(withdrawalsData);
             setOrders(ordersData);
+            setHotels(hotelsData);
           } catch (error) {
             console.error("Failed to fetch admin data", error);
           } finally {
@@ -69,12 +73,18 @@ export default function AdminDashboard() {
     .filter((w) => w.status === "approved")
     .reduce((sum, w) => sum + w.amount, 0);
   const platformIncome = totalWithdrawn * 0.05;
+  const pendingWithdrawalCount = withdrawals.filter(w => w.status === 'pending').length;
+  const totalHotels = hotels.length;
+  const totalOrders = orders.length;
 
   const stats = [
     { title: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign },
     { title: "Total Withdrawn", value: `$${totalWithdrawn.toFixed(2)}`, icon: Landmark },
     { title: "Platform Income", value: `$${platformIncome.toFixed(2)}`, icon: Activity },
+    { title: "Pending Withdrawals", value: pendingWithdrawalCount.toString(), icon: HelpCircle },
     { title: "Total Users", value: users.length.toString(), icon: Users },
+    { title: "Total Hotels", value: totalHotels.toString(), icon: Hotel },
+    { title: "Total Orders", value: totalOrders.toString(), icon: ShoppingCart },
   ];
 
   const recentUsers = users
@@ -100,7 +110,7 @@ export default function AdminDashboard() {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(7)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-2/3" />
