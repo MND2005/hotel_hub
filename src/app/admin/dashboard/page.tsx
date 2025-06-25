@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, DollarSign, Activity, Landmark, Hotel, ShoppingCart, HelpCircle } from "lucide-react";
+import { Users, DollarSign, Activity, Landmark, Hotel, ShoppingCart, HelpCircle, TrendingUp } from "lucide-react";
 import { getAllUsers } from "@/lib/firebase/users";
 import { getAllWithdrawals } from "@/lib/firebase/withdrawals";
 import { getAllOrders } from "@/lib/firebase/orders";
@@ -73,12 +73,14 @@ export default function AdminDashboard() {
     .filter((w) => w.status === "approved")
     .reduce((sum, w) => sum + w.amount, 0);
   const platformIncome = totalWithdrawn * 0.05;
+  const expectedPlatformIncome = totalRevenue * 0.05;
   const pendingWithdrawalCount = withdrawals.filter(w => w.status === 'pending').length;
   const totalHotels = hotels.length;
   const totalOrders = orders.length;
 
   const stats = [
     { title: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign },
+    { title: "Expected Platform Income", value: `$${expectedPlatformIncome.toFixed(2)}`, icon: TrendingUp },
     { title: "Total Withdrawn", value: `$${totalWithdrawn.toFixed(2)}`, icon: Landmark },
     { title: "Platform Income", value: `$${platformIncome.toFixed(2)}`, icon: Activity },
     { title: "Pending Withdrawals", value: pendingWithdrawalCount.toString(), icon: HelpCircle },
@@ -110,7 +112,7 @@ export default function AdminDashboard() {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(7)].map((_, i) => (
+          {[...Array(8)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-2/3" />
