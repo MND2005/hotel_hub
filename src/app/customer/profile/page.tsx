@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -31,16 +31,28 @@ import {
     TableHeader,
     TableRow,
   } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { getUser, updateUser } from "@/lib/firebase/users";
+import { onAuthStateChanged, User as FirebaseUser, deleteUser } from "firebase/auth";
+import { getUser, updateUser, deleteUserDocument } from "@/lib/firebase/users";
 import type { User, Order } from "@/lib/types";
 import { getOrdersByCustomer } from "@/lib/firebase/orders";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -51,7 +63,9 @@ export default function CustomerProfilePage() {
   const [userData, setUserData] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
   
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -105,6 +119,30 @@ export default function CustomerProfilePage() {
     }
   }
 
+  async function handleDeleteAccount() {
+    if (!user) {
+      toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
+      return;
+    }
+    setIsDeleting(true);
+    try {
+        await deleteUserDocument(user.uid);
+        await deleteUser(user);
+        toast({ title: 'Account Deleted', description: 'Your account has been permanently deleted.' });
+        router.push('/');
+    } catch (error: any) {
+        console.error("Account deletion failed:", error);
+        let description = 'Could not delete your account. Please try again.';
+        if (error.code === 'auth/requires-recent-login') {
+            description = 'This is a sensitive operation. Please log out and log back in before deleting your account.';
+        }
+        toast({ title: 'Deletion Failed', description, variant: 'destructive' });
+    } finally {
+        setIsDeleting(false);
+    }
+  }
+
+
   if (loading) {
     return (
         <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -144,7 +182,7 @@ export default function CustomerProfilePage() {
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-3">
-            <div className="md:col-span-1">
+            <div className="md:col-span-1 space-y-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <Card>
@@ -184,6 +222,40 @@ export default function CustomerProfilePage() {
                     </Card>
                 </form>
               </Form>
+                <Card className="border-destructive">
+                    <CardHeader>
+                        <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                        <CardDescription>
+                            This action is permanent and cannot be undone.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" className="w-full">Delete My Account</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete your
+                                    account and remove all your data from our servers.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleDeleteAccount}
+                                    disabled={isDeleting}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                    {isDeleting ? 'Deleting...' : 'Yes, delete my account'}
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </CardContent>
+                </Card>
             </div>
             <div className="md:col-span-2">
                 <Card>

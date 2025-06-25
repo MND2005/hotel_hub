@@ -1,6 +1,6 @@
 import { db } from '@/lib/firebase';
 import { firebaseNotConfiguredError } from './auth';
-import { collection, getDocs, query, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 export async function getAllUsers(): Promise<User[]> {
@@ -34,4 +34,12 @@ export async function updateUser(userId: string, data: Partial<Pick<User, 'name'
     }
     const userDocRef = doc(db, 'users', userId);
     await updateDoc(userDocRef, data);
+}
+
+export async function deleteUserDocument(userId: string): Promise<void> {
+    if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+    }
+    const userDocRef = doc(db, 'users', userId);
+    await deleteDoc(userDocRef);
 }
