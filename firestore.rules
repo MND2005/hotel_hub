@@ -4,60 +4,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isRequestingUser(userId) {
-      return request.auth.uid == userId;
+    // Helper Functions
+    function isOwner(ownerId) {
+      return request.auth.uid == ownerId;
     }
 
     function getUserRole() {
-      // Gracefully handle non-existent user documents
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
+
+    function isAdmin() {
+      return getUserRole() == 'admin';
+    }
     
+    function isHotelOwner() {
+      return getUserRole() == 'owner';
+    }
+
     match /users/{userId} {
-      allow read: if isRequestingUser(userId) || getUserRole() == 'admin';
-      allow create: if request.resource.data.id == request.auth.uid;
-      // Allow user to only update their name
-      allow update: if isRequestingUser(userId) && request.resource.data.keys().hasOnly(['name']);
-      // Allow user to delete their own user document
-      allow delete: if isRequestingUser(userId);
+      allow read: if request.auth != null;
+      allow create: if request.auth.uid == userId;
+      allow update: if isOwner(userId) && request.resource.data.keys().hasOnly(['name']);
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     match /hotels/{hotelId} {
-      // Anyone can read an open hotel, owners and admins can read any
-      allow read: if resource.data.isOpen == true || getUserRole() == 'admin' || isRequestingUser(resource.data.ownerId);
-      // Only owners can create hotels for themselves
-      allow create: if getUserRole() == 'owner' && isRequestingUser(request.resource.data.ownerId);
-      // Owners can update their own hotels, admins can update any
-      allow update: if getUserRole() == 'admin' || isRequestingUser(resource.data.ownerId);
-      // Admins can list all hotels
-      allow list: if getUserRole() == 'admin';
-    }
-    
-    // Rules for all subcollections under a hotel (rooms, menuItems)
-    match /hotels/{hotelId}/{subcollection}/{documentId} {
-      // Check parent hotel permissions
-      allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || getUserRole() == 'admin' || isRequestingUser(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-      allow write: if getUserRole() == 'admin' || isRequestingUser(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
+      allow read: if true;
+      allow create: if isHotelOwner() && isOwner(request.resource.data.ownerId);
+      allow update: if isOwner(resource.data.ownerId) || isAdmin();
+      allow delete: if isOwner(resource.data.ownerId) || isAdmin();
+
+      match /rooms/{roomId} {
+        allow read: if true;
+        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId) || isAdmin();
+      }
+
+      match /menuItems/{menuItemId} {
+        allow read: if true;
+        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId) || isAdmin();
+      }
     }
 
     match /orders/{orderId} {
-      // Creation is handled by a trusted backend (Stripe webhook)
-      allow create: if request.auth != null; 
-      // Customers, owners, and admins can read relevant orders
-      allow read: if isRequestingUser(resource.data.customerId) || isRequestingUser(resource.data.ownerId) || getUserRole() == 'admin';
-      // Admins can list all orders
-      allow list: if getUserRole() == 'admin';
+      allow read: if isOwner(resource.data.customerId) || isOwner(resource.data.ownerId) || isAdmin();
+      // Orders are created server-side by the webhook, not by clients.
+      allow create: if false; 
+      allow update: if false;
+      allow delete: if false;
     }
-    
+
     match /withdrawals/{withdrawalId} {
-      // Only owners can create withdrawal requests for themselves
-      allow create: if getUserRole() == 'owner' && isRequestingUser(request.resource.data.ownerId);
-      // Admins and the relevant owner can read withdrawals
-      allow read: if getUserRole() == 'admin' || isRequestingUser(resource.data.ownerId);
-      // Admin can only update status and processedDate
-      allow update: if getUserRole() == 'admin' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']);
-      // Admins can list all withdrawals
-      allow list: if getUserRole() == 'admin';
+      allow read: if isOwner(resource.data.ownerId) || isAdmin();
+      allow create: if isHotelOwner() && isOwner(request.resource.data.ownerId);
+      // Only an admin can approve or deny a withdrawal request.
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']);
+      allow delete: if false;
     }
   }
 }
