@@ -15,10 +15,12 @@ import { updateWithdrawalStatus } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 export function WithdrawalClient({ withdrawals, userMap }: { withdrawals: Withdrawal[], userMap: Map<string, string> }) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const handleUpdate = (id: string, status: 'approved' | 'denied') => {
     startTransition(async () => {
@@ -28,6 +30,7 @@ export function WithdrawalClient({ withdrawals, userMap }: { withdrawals: Withdr
           title: "Success",
           description: `Withdrawal has been ${status}.`,
         });
+        router.refresh();
       } else {
         toast({
           title: "Error",

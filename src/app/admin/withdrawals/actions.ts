@@ -8,6 +8,8 @@ export async function updateWithdrawalStatus(withdrawalId: string, status: 'appr
   if (result.success) {
     revalidatePath('/admin/withdrawals');
     revalidatePath('/admin/dashboard');
+    revalidatePath('/owner/withdrawals');
+    revalidatePath('/owner/dashboard');
   }
   return result;
 }
