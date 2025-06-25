@@ -41,3 +41,15 @@ export async function getOrdersByHotelOwner(ownerId: string): Promise<Order[]> {
     });
     return orders;
 }
+
+export async function getAllOrders(): Promise<Order[]> {
+    if (!db) {
+        throw new Error(firebaseNotConfiguredError);
+    }
+    const orders: Order[] = [];
+    const querySnapshot = await getDocs(collection(db, "orders"));
+    querySnapshot.forEach((doc) => {
+        orders.push({ id: doc.id, ...doc.data() } as Order);
+    });
+    return orders;
+}

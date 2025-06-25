@@ -16,13 +16,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Hotel, DollarSign, Activity } from "lucide-react";
+import { Users, DollarSign, Activity, Landmark } from "lucide-react";
 import { getAllUsers } from "@/lib/firebase/users";
-import { getAllHotelsForAdmin } from "@/lib/firebase/hotels";
 import { getAllWithdrawals } from "@/lib/firebase/withdrawals";
+import { getAllOrders } from "@/lib/firebase/orders";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect } from "react";
-import type { User, Hotel as HotelType, Withdrawal } from "@/lib/types";
+import type { User, Withdrawal, Order } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -30,8 +30,8 @@ import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
-  const [hotels, setHotels] = useState<HotelType[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -40,14 +40,14 @@ export default function AdminDashboard() {
       if (user) {
         const fetchData = async () => {
           try {
-            const [usersData, hotelsData, withdrawalsData] = await Promise.all([
+            const [usersData, withdrawalsData, ordersData] = await Promise.all([
               getAllUsers(),
-              getAllHotelsForAdmin(),
               getAllWithdrawals(),
+              getAllOrders(),
             ]);
             setUsers(usersData);
-            setHotels(hotelsData);
             setWithdrawals(withdrawalsData);
+            setOrders(ordersData);
           } catch (error) {
             console.error("Failed to fetch admin data", error);
           } finally {
@@ -64,15 +64,17 @@ export default function AdminDashboard() {
     return () => unsubscribe();
   }, [router]);
 
+  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const totalWithdrawn = withdrawals
+    .filter((w) => w.status === "approved")
+    .reduce((sum, w) => sum + w.amount, 0);
+  const platformIncome = totalWithdrawn * 0.05;
+
   const stats = [
+    { title: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign },
+    { title: "Total Withdrawn", value: `$${totalWithdrawn.toFixed(2)}`, icon: Landmark },
+    { title: "Platform Income", value: `$${platformIncome.toFixed(2)}`, icon: Activity },
     { title: "Total Users", value: users.length.toString(), icon: Users },
-    { title: "Total Hotels", value: hotels.length.toString(), icon: Hotel },
-    {
-      title: "Pending Withdrawals",
-      value: withdrawals.filter((w) => w.status === "pending").length.toString(),
-      icon: DollarSign,
-    },
-    { title: "Total Revenue", value: "$0.00", icon: Activity },
   ];
 
   const recentUsers = users
