@@ -29,7 +29,7 @@ import Map from "@/components/app/map";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { addHotel } from "@/lib/firebase/hotels";
+import { addHotel, updateHotel } from "@/lib/firebase/hotels";
 import { auth } from "@/lib/firebase";
 import { ImageUploader } from "@/components/app/image-uploader";
 import { uploadImage } from "@/lib/firebase/storage";
@@ -76,19 +76,24 @@ export default function AddHotelPage() {
       return;
     }
     try {
-      const uploadPromises = values.imageUrls.map(file => 
-          uploadImage(file, `hotels/temp/${auth.currentUser!.uid}`) // temp path until we have hotelId
+      const { imageUrls: filesToUpload, ...hotelDetails } = values;
+
+      // 1. Create the hotel document first with an empty image array to get an ID.
+      const hotelId = await addHotel({
+        ...hotelDetails,
+        imageUrls: [], // Start with no images
+      });
+
+      // 2. Now, upload images to the permanent path using the new hotel ID.
+      const uploadPromises = filesToUpload.map(file => 
+          uploadImage(file, `hotels/${hotelId}`)
       );
       const uploadedUrls = await Promise.all(uploadPromises);
 
-      const payload = {
-        ...values,
-        imageUrls: uploadedUrls,
-      };
-
-      const hotelId = await addHotel(payload);
-
-      // Here you might want to move images from temp to a permanent folder, but for simplicity we'll leave them.
+      // 3. Finally, update the hotel document with the final image URLs.
+      if (uploadedUrls.length > 0) {
+        await updateHotel(hotelId, { imageUrls: uploadedUrls });
+      }
       
       toast({
         title: "Hotel Added",

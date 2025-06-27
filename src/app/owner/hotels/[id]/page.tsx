@@ -113,7 +113,7 @@ export default function HotelDetailsPage() {
         const newFiles = values.imageUrls.filter((item): item is File => item instanceof File);
 
         const uploadPromises = newFiles.map(file => 
-            uploadImage(file, `hotels/${hotelId}/${auth.currentUser!.uid}`)
+            uploadImage(file, `hotels/${hotelId}`)
         );
         const newUrls = await Promise.all(uploadPromises);
 
