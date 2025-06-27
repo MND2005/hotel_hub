@@ -34,6 +34,9 @@ export function uploadImage(file: File, path: string): Promise<string> {
                     case 'storage/canceled':
                         reject(new Error("The file upload was canceled."));
                         break;
+                    case 'storage/retry-limit-exceeded':
+                        reject(new Error("Network error: The upload timed out. Please check your connection and try again."));
+                        break;
                     case 'storage/unknown':
                         reject(new Error("An unknown error occurred during upload. Check your network and Firebase Storage CORS settings."));
                         break;

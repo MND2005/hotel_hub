@@ -24,6 +24,8 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
         db = getFirestore(app);
         auth = getAuth(app);
         storage = getStorage(app);
+        // Increase the maximum time to retry uploads to 2 minutes
+        storage.maxUploadRetryTime = 120000;
     } catch (e) {
         console.error("Firebase initialization error:", e);
         app = null;
