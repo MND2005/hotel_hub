@@ -18,7 +18,7 @@ export default function OwnerLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-transparent">
         <Sidebar>
           <SidebarHeader>
             <Link href="/owner" className="flex items-center gap-2">

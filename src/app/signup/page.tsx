@@ -77,7 +77,7 @@ export default function SignupPage() {
   }
   
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex items-center justify-center min-h-screen bg-transparent">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <CardTitle>Create an account</CardTitle>

@@ -82,7 +82,7 @@ export default function LoginPage() {
       if (error.message === firebaseNotConfiguredError || error?.code === 'auth/invalid-api-key') {
         description = firebaseNotConfiguredError;
       } else if (error?.code === 'auth/invalid-credential') {
-        description = "Invalid credentials. Please check your email and password and try again.";
+        description = "Invalid email or password. Please try again.";
       } else if (error?.code === 'auth/configuration-not-found') {
         description = "Firebase Authentication is not configured. Please enable Email/Password sign-in in your Firebase project console.";
       } else if (error.message === "User data not found in Firestore.") {
@@ -98,7 +98,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex items-center justify-center min-h-screen bg-transparent">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <CardTitle>Login</CardTitle>

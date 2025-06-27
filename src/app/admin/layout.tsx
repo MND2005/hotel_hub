@@ -18,7 +18,7 @@ export default function AdminLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-transparent">
         <Sidebar>
           <SidebarHeader>
             <Link href="/admin" className="flex items-center gap-2">
