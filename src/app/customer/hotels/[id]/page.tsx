@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -222,57 +223,65 @@ export default function HotelDetailPage() {
                     <TabsTrigger value="rooms">Book a Room</TabsTrigger>
                     <TabsTrigger value="food">Order Food</TabsTrigger>
                 </TabsList>
-                <TabsContent value="rooms" className="mt-6 space-y-4">
+                <TabsContent value="rooms" className="mt-6">
                     {rooms.length === 0 ? (
                       <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
-                    ) : rooms.map(room => (
-                        <Card key={room.id} className="flex flex-col md:flex-row items-center overflow-hidden">
-                            <div className="w-full md:w-48 shrink-0">
-                               <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
-                            </div>
-                            <CardHeader className="flex-1">
-                                <CardTitle>{room.type}</CardTitle>
-                                <CardDescription className="flex items-center gap-4 pt-1">
-                                    <span className="flex items-center gap-1"><Users className="w-4 h-4"/> {room.capacity} Guests</span>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex items-center gap-4 p-4">
-                                <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
-                                  {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    ) : (
+                      <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 md:flex-col md:overflow-visible md:snap-auto md:gap-4 md:p-0">
+                        {rooms.map(room => (
+                            <Card key={room.id} className="w-[85vw] flex-shrink-0 snap-center md:w-full md:snap-align-none flex flex-col md:flex-row items-center overflow-hidden">
+                                <div className="w-full md:w-48 shrink-0">
+                                   <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
+                                </div>
+                                <CardHeader className="flex-1">
+                                    <CardTitle>{room.type}</CardTitle>
+                                    <CardDescription className="flex items-center gap-4 pt-1">
+                                        <span className="flex items-center gap-1"><Users className="w-4 h-4"/> {room.capacity} Guests</span>
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex items-center gap-4 p-4">
+                                    <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                    <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
+                                      {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ))}
+                      </div>
+                    )}
                 </TabsContent>
                 <TabsContent value="food" className="mt-6">
-                   <div className="space-y-4">
-                    {menu.length === 0 ? (
+                   {menu.length === 0 ? (
                       <p className="text-muted-foreground">The menu is currently unavailable.</p>
-                    ) : menu.map(item => (
-                        <div key={item.id} className="flex justify-between items-center">
-                             <div className="flex items-center gap-4">
-                                {item.imageUrl && (
-                                    <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
-                                )}
-                                <div>
-                                    <h4 className="font-semibold">{item.name}</h4>
-                                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                                    <p className="font-bold text-primary mt-1">${item.price.toFixed(2)}</p>
+                   ) : (
+                    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 md:grid md:grid-cols-2 md:overflow-visible md:snap-auto md:gap-6 md:p-0">
+                      {menu.map(item => (
+                          <Card key={item.id} className="w-[85vw] flex-shrink-0 snap-center p-4 md:w-full md:snap-align-none flex flex-col">
+                                <div className="flex items-start gap-4 flex-grow">
+                                    {item.imageUrl && (
+                                        <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
+                                    )}
+                                    <div className='flex-1'>
+                                        <h4 className="font-semibold">{item.name}</h4>
+                                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
-                                  <Minus className="w-4 h-4"/>
-                                </Button>
-                                <span>{foodOrder[item.id]?.quantity || 0}</span>
-                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
-                                  <Plus className="w-4 h-4"/>
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
-                   </div>
+                                <div className="flex items-center justify-between mt-4">
+                                    <p className="font-bold text-primary text-lg">${item.price.toFixed(2)}</p>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
+                                          <Minus className="w-4 h-4"/>
+                                        </Button>
+                                        <span>{foodOrder[item.id]?.quantity || 0}</span>
+                                        <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
+                                          <Plus className="w-4 h-4"/>
+                                        </Button>
+                                    </div>
+                                </div>
+                          </Card>
+                      ))}
+                    </div>
+                   )}
                 </TabsContent>
             </Tabs>
         </div>
