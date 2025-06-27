@@ -159,6 +159,17 @@ export default function HotelDetailPage() {
     return roomPrice + foodPrice;
   }, [bookedRoom, foodOrder]);
 
+  const groupedMenu = useMemo(() => {
+    return menu.reduce((acc, item) => {
+      const category = item.category;
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(item);
+      return acc;
+    }, { breakfast: [], lunch: [], dinner: [] } as Record<'breakfast' | 'lunch' | 'dinner', MenuItem[]>);
+  }, [menu]);
+
   const handleCheckout = () => {
     startTransition(async () => {
         if (!user) {
@@ -301,32 +312,44 @@ export default function HotelDetailPage() {
                    {menu.length === 0 ? (
                       <p className="text-muted-foreground">The menu is currently unavailable.</p>
                    ) : (
-                    <div className="space-y-4">
-                      {menu.map(item => (
-                          <Card key={item.id} className="w-full p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4">
-                              <div className="flex items-start sm:items-center gap-4 w-full sm:w-auto flex-1">
-                                  {item.imageUrl && (
-                                      <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover shrink-0" />
-                                  )}
-                                  <div className='flex-1'>
-                                      <h4 className="font-semibold">{item.name}</h4>
-                                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                                  </div>
+                    <div className="space-y-8">
+                       {(['breakfast', 'lunch', 'dinner'] as const).map(category => {
+                          const items = groupedMenu[category];
+                          if (!items || items.length === 0) return null;
+
+                          return (
+                            <div key={category}>
+                              <h3 className="text-2xl font-bold tracking-tight mb-4 capitalize">{category}</h3>
+                              <div className="space-y-4">
+                                {items.map(item => (
+                                    <Card key={item.id} className="w-full p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4">
+                                        <div className="flex items-start sm:items-center gap-4 w-full sm:w-auto flex-1">
+                                            {item.imageUrl && (
+                                                <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover shrink-0" />
+                                            )}
+                                            <div className='flex-1'>
+                                                <h4 className="font-semibold">{item.name}</h4>
+                                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between w-full sm:w-auto shrink-0 mt-4 sm:mt-0 gap-4">
+                                            <p className="font-bold text-primary text-lg">${item.price.toFixed(2)}</p>
+                                            <div className="flex items-center gap-2">
+                                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
+                                                  <Minus className="w-4 h-4"/>
+                                                </Button>
+                                                <span>{foodOrder[item.id]?.quantity || 0}</span>
+                                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
+                                                  <Plus className="w-4 h-4"/>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
                               </div>
-                              <div className="flex items-center justify-between w-full sm:w-auto shrink-0 mt-4 sm:mt-0 gap-4">
-                                  <p className="font-bold text-primary text-lg">${item.price.toFixed(2)}</p>
-                                  <div className="flex items-center gap-2">
-                                      <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
-                                        <Minus className="w-4 h-4"/>
-                                      </Button>
-                                      <span>{foodOrder[item.id]?.quantity || 0}</span>
-                                      <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
-                                        <Plus className="w-4 h-4"/>
-                                      </Button>
-                                  </div>
-                              </div>
-                          </Card>
-                      ))}
+                            </div>
+                          )
+                       })}
                     </div>
                    )}
                 </TabsContent>
