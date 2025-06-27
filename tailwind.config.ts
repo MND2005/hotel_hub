@@ -18,6 +18,9 @@ const config = {
       },
     },
     extend: {
+      backgroundImage: {
+        'card-gradient': 'linear-gradient(145deg, hsl(var(--card)), hsl(var(--background)))',
+      },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
         body: ["PT Sans", "sans-serif"],
