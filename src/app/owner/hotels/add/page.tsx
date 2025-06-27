@@ -29,7 +29,7 @@ import Map from "@/components/app/map";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { addHotel, updateHotel } from "@/lib/firebase/hotels";
+import { addHotel } from "@/lib/firebase/hotels";
 import { auth } from "@/lib/firebase";
 import { ImageUploader } from "@/components/app/image-uploader";
 import { uploadImage } from "@/lib/firebase/storage";
@@ -75,31 +75,31 @@ export default function AddHotelPage() {
       });
       return;
     }
+
     try {
-      const { imageUrls: filesToUpload, ...hotelDetails } = values;
-
-      // 1. Create the hotel document first with an empty image array to get an ID.
-      const hotelId = await addHotel({
-        ...hotelDetails,
-        imageUrls: [], // Start with no images
-      });
-
-      // 2. Now, upload images to the permanent path using the new hotel ID.
-      const uploadPromises = filesToUpload.map(file => 
-          uploadImage(file, 'uploads')
+      // 1. Upload all images first to get their URLs.
+      const uploadPromises = values.imageUrls.map(file => 
+        uploadImage(file, 'uploads')
       );
       const uploadedUrls = await Promise.all(uploadPromises);
 
-      // 3. Finally, update the hotel document with the final image URLs.
-      if (uploadedUrls.length > 0) {
-        await updateHotel(hotelId, { imageUrls: uploadedUrls });
-      }
+      // 2. Create the hotel document with all the data, including the new image URLs.
+      await addHotel({
+        name: values.name,
+        address: values.address,
+        description: values.description,
+        latitude: values.latitude,
+        longitude: values.longitude,
+        isOpen: values.isOpen,
+        imageUrls: uploadedUrls,
+      });
       
       toast({
         title: "Hotel Added",
         description: "Your new hotel has been saved successfully.",
       });
       router.push("/owner/hotels");
+
     } catch (error) {
       console.error("Failed to add hotel:", error);
       toast({
