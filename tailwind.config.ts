@@ -103,7 +103,7 @@ const config = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-in-out forwards",
-        "gradient-animation": "gradient-animation 18s ease infinite",
+        "gradient-animation": "gradient-animation 25s ease infinite",
       },
     },
   },

@@ -8,31 +8,34 @@ body {
 
 @layer base {
   :root {
-    --background: 220 100% 98%;
-    --foreground: 220 25% 10%;
+    --background: 270 60% 98%;
+    --foreground: 270 25% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card-foreground: 270 25% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
-    --primary: 240 100% 65%;
+    --popover-foreground: 270 25% 10%;
+    --primary: 262 85% 60%; /* Vibrant purple */
     --primary-foreground: 0 0% 100%;
-    --secondary: 340 100% 97%;
-    --secondary-foreground: 340 25% 10%;
-    --muted: 220 50% 94%;
-    --muted-foreground: 220 25% 40%;
-    --accent: 330 100% 65%;
+    --secondary: 262 60% 96%;
+    --secondary-foreground: 262 25% 10%;
+    --muted: 262 60% 94%;
+    --muted-foreground: 262 25% 40%;
+    --accent: 330 90% 65%; /* Vibrant pink */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 50% 90%;
-    --input: 220 50% 92%;
-    --ring: 240 100% 65%;
-    --chart-1: 240 100% 65%;
-    --chart-2: 330 100% 65%;
-    --chart-3: 25 95% 53%;
-    --chart-4: 195 85% 55%;
-    --chart-5: 280 70% 65%;
+    --border: 262 60% 90%;
+    --input: 262 60% 92%;
+    --ring: 262 85% 60%;
     --radius: 0.5rem;
+
+    /* Softer, light neon colors for the animated gradient */
+    --chart-1: 262 100% 88%; /* Soft Purple */
+    --chart-2: 330 100% 88%; /* Soft Pink */
+    --chart-3: 290 100% 88%; /* Soft Magenta */
+    --chart-4: 217 100% 88%; /* Soft Blue */
+    --chart-5: 195 100% 88%; /* Soft Cyan */
+
     --sidebar-background: 235 50% 15%;
     --sidebar-foreground: 235 20% 95%;
     --sidebar-primary: 245 80% 80%;
@@ -44,30 +47,33 @@ body {
   }
 
   .dark {
-    --background: 230 20% 10%;
+    /* A dark neon theme */
+    --background: 230 20% 7%;
     --foreground: 230 20% 95%;
-    --card: 230 20% 14%;
+    --card: 230 20% 12%;
     --card-foreground: 230 20% 95%;
-    --popover: 230 20% 10%;
+    --popover: 230 20% 7%;
     --popover-foreground: 230 20% 95%;
-    --primary: 240 90% 70%;
+    --primary: 262 85% 70%;
     --primary-foreground: 230 20% 10%;
     --secondary: 330 30% 20%;
     --secondary-foreground: 330 20% 95%;
     --muted: 230 20% 20%;
     --muted-foreground: 230 20% 65%;
-    --accent: 330 90% 70%;
+    --accent: 330 85% 70%;
     --accent-foreground: 230 20% 10%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
     --border: 230 20% 25%;
     --input: 230 20% 25%;
-    --ring: 245 80% 75%;
-    --chart-1: 240 90% 70%;
-    --chart-2: 330 90% 70%;
-    --chart-3: 25 85% 60%;
-    --chart-4: 195 90% 60%;
-    --chart-5: 280 75% 70%;
+    --ring: 262 85% 75%;
+    
+    --chart-1: 262 100% 88%;
+    --chart-2: 330 100% 88%;
+    --chart-3: 290 100% 88%;
+    --chart-4: 217 100% 88%;
+    --chart-5: 195 100% 88%;
+
     --sidebar-background: 230 20% 10%;
     --sidebar-foreground: 230 20% 95%;
     --sidebar-primary: 245 80% 75%;
@@ -83,8 +89,8 @@ body {
   }
   body {
     @apply text-foreground;
-    background: linear-gradient(-45deg, hsl(var(--chart-2)), hsl(var(--chart-5)), hsl(var(--chart-1)), hsl(var(--chart-4)));
-    background-size: 400% 400%;
-    animation: gradient-animation 18s ease infinite;
+    background: linear-gradient(270deg, hsl(var(--chart-4)), hsl(var(--chart-1)), hsl(var(--chart-2)), hsl(var(--chart-3)));
+    background-size: 800% 800%;
+    animation: gradient-animation 25s ease infinite;
   }
 }

@@ -24,20 +24,20 @@ import { useToast } from "@/hooks/use-toast";
 type HotelWithDistance = Hotel & { distance: number };
 
 const HomePageSkeleton = () => (
-    <Card className="w-full max-w-md mx-4 bg-white/10 backdrop-blur-lg border-white/20 text-white shadow-2xl">
+    <Card className="w-full max-w-md mx-4">
         <CardHeader>
             <CardTitle className="text-center text-xl">Finding Your Nearest Hotel...</CardTitle>
         </CardHeader>
         <CardContent>
             <div className="space-y-4">
-                <Skeleton className="aspect-video w-full rounded-lg bg-white/20" />
-                <Skeleton className="h-8 w-3/4 mx-auto bg-white/20" />
-                <Skeleton className="h-5 w-full mx-auto bg-white/20" />
-                <Skeleton className="h-5 w-1/3 mx-auto bg-white/20" />
+                <Skeleton className="aspect-video w-full rounded-lg" />
+                <Skeleton className="h-8 w-3/4 mx-auto" />
+                <Skeleton className="h-5 w-full mx-auto" />
+                <Skeleton className="h-5 w-1/3 mx-auto" />
             </div>
         </CardContent>
         <CardFooter>
-            <Skeleton className="h-11 w-full rounded-md bg-white/20" />
+            <Skeleton className="h-11 w-full rounded-md" />
         </CardFooter>
     </Card>
 );
@@ -126,16 +126,16 @@ export default function Home() {
   }
 
   const InitialCard = () => (
-    <Card className="w-full max-w-md mx-4 bg-black/20 backdrop-blur-xl border-white/20 text-white shadow-2xl animate-fade-in">
+    <Card className="w-full max-w-md mx-4 text-center animate-fade-in">
         <CardHeader>
-            <CardTitle className="text-center text-xl tracking-wide">Welcome to Tri-Sided Hub</CardTitle>
-            <CardDescription className="text-center text-white/80 pt-2">Find your perfect stay in Sri Lanka.</CardDescription>
+            <CardTitle className="text-xl tracking-wide">Welcome to Tri-Sided Hub</CardTitle>
+            <CardDescription className="pt-2">Find your perfect stay in Sri Lanka.</CardDescription>
         </CardHeader>
-        <CardContent className="text-center">
+        <CardContent>
             <p>Click the button below to allow location access and find the hotel closest to you.</p>
         </CardContent>
         <CardFooter>
-            <Button onClick={findNearestHotel} size="lg" className="w-full bg-white/90 text-black hover:bg-white">
+            <Button onClick={findNearestHotel} size="lg" className="w-full">
                 Find Nearest Hotel
             </Button>
         </CardFooter>
@@ -148,14 +148,14 @@ export default function Home() {
     }
     if (nearestHotel) {
       return (
-        <Card className="w-full max-w-md mx-4 bg-black/20 backdrop-blur-xl border-white/20 text-white shadow-2xl animate-fade-in">
+        <Card className="w-full max-w-md mx-4 animate-fade-in">
             <CardHeader>
                 <CardTitle className="text-center text-xl tracking-wide">Featured Hotel</CardTitle>
-                 {error && <CardDescription className="text-center text-orange-300 pt-2">{error}</CardDescription>}
+                 {error && <CardDescription className="text-center text-orange-500 pt-2">{error}</CardDescription>}
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                    <div className="aspect-video w-full overflow-hidden rounded-lg border border-white/10">
+                    <div className="aspect-video w-full overflow-hidden rounded-lg border">
                         <Image 
                             src={nearestHotel.imageUrls?.[currentImageIndex] || 'https://placehold.co/600x400.png'}
                             alt={nearestHotel.name}
@@ -166,8 +166,8 @@ export default function Home() {
                             key={currentImageIndex}
                         />
                     </div>
-                    <h3 className="text-3xl font-bold text-center drop-shadow-md">{nearestHotel.name}</h3>
-                    <p className="flex items-center justify-center gap-2 text-sm text-white/80">
+                    <h3 className="text-3xl font-bold text-center">{nearestHotel.name}</h3>
+                    <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                         <MapPin className="w-4 h-4 shrink-0"/>
                         <span className="truncate">{nearestHotel.address}</span>
                     </p>
@@ -175,7 +175,7 @@ export default function Home() {
                 </div>
             </CardContent>
             <CardFooter>
-                <Button asChild size="lg" className="w-full bg-white/90 text-black hover:bg-white">
+                <Button asChild size="lg" className="w-full">
                     <Link href="/login">
                         View Hotel & Book
                     </Link>
@@ -186,10 +186,10 @@ export default function Home() {
     }
     if (error && !loading) {
         return (
-            <Card className="w-full max-w-md mx-4 bg-black/20 backdrop-blur-xl border-white/20 text-white shadow-2xl">
+            <Card className="w-full max-w-md mx-4">
                 <CardContent className="p-10 text-center">
-                    <p className="text-orange-300">{error}</p>
-                    <Button onClick={findNearestHotel} size="lg" className="w-full bg-white/90 text-black hover:bg-white mt-4">
+                    <p className="text-destructive">{error}</p>
+                    <Button onClick={findNearestHotel} size="lg" className="w-full mt-4">
                         Try Again
                     </Button>
                 </CardContent>
@@ -200,22 +200,22 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black">
+    <div className="relative w-full h-screen overflow-hidden">
         <Map
             center={userLocation || sriLankaCenter}
             zoom={userLocation ? 13 : 8}
             markers={mapMarkers}
             className="absolute inset-0 w-full h-full"
         />
-        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 bg-black/20" />
 
-        <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between border-b border-white/10 bg-black/20 p-4 backdrop-blur-lg sm:px-6 lg:px-8">
+        <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 sm:px-6 lg:px-8">
             <h1 className="text-2xl font-bold text-white drop-shadow-lg">Tri-Sided Hub</h1>
             <div className="space-x-2">
                 <Button asChild variant="ghost" className="text-white hover:bg-white/20 hover:text-white">
                     <Link href="/login">Login</Link>
                 </Button>
-                <Button asChild className="bg-white/90 text-black hover:bg-white">
+                <Button asChild>
                     <Link href="/signup">Sign Up</Link>
                 </Button>
             </div>
