@@ -127,7 +127,7 @@ export default function AdminEditHotelPage() {
         const newFiles = values.imageUrls.filter((item): item is File => item instanceof File);
 
         const uploadPromises = newFiles.map(file => 
-            uploadImage(file, `hotels/${hotelId}/admin-uploads`) // Separate folder for admin uploads
+            uploadImage(file, `uploads/hotels/${hotelId}/admin-uploads`) // Separate folder for admin uploads
         );
         const newUrls = await Promise.all(uploadPromises);
 

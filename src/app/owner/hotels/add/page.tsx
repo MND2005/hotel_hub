@@ -86,7 +86,7 @@ export default function AddHotelPage() {
 
       // 2. Now, upload images to the permanent path using the new hotel ID.
       const uploadPromises = filesToUpload.map(file => 
-          uploadImage(file, `hotels/${hotelId}`)
+          uploadImage(file, `uploads/hotels/${hotelId}`)
       );
       const uploadedUrls = await Promise.all(uploadPromises);
 
