@@ -93,7 +93,7 @@ export function MenuItemFormDialog({ isOpen, setIsOpen, hotelId, menuItem, onSav
        if (typeof imageValue === 'string') {
          finalImageUrl = imageValue;
        } else if (imageValue instanceof File) {
-         finalImageUrl = await uploadImage(imageValue, `uploads/hotels/${hotelId}/menu`);
+         finalImageUrl = await uploadImage(imageValue, 'uploads');
        }
 
        const menuItemPayload = {

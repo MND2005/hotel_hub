@@ -91,7 +91,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
       const newFiles = values.imageUrls.filter((item): item is File => item instanceof File);
 
       const uploadPromises = newFiles.map(file => 
-          uploadImage(file, `uploads/hotels/${hotelId}/rooms`)
+          uploadImage(file, 'uploads')
       );
       const newUrls = await Promise.all(uploadPromises);
 
