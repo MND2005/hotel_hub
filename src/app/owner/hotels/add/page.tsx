@@ -77,13 +77,11 @@ export default function AddHotelPage() {
     }
 
     try {
-      // 1. Upload all images first to get their URLs.
       const uploadPromises = values.imageUrls.map(file => 
         uploadImage(file, 'uploads')
       );
       const uploadedUrls = await Promise.all(uploadPromises);
 
-      // 2. Create the hotel document with all the data, including the new image URLs.
       await addHotel({
         name: values.name,
         address: values.address,
@@ -102,9 +100,10 @@ export default function AddHotelPage() {
 
     } catch (error) {
       console.error("Failed to add hotel:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
       toast({
-        title: "Error",
-        description: "Failed to add hotel. Please try again.",
+        title: "Error Adding Hotel",
+        description: `Failed to add hotel. ${errorMessage}`,
         variant: "destructive",
       });
     }

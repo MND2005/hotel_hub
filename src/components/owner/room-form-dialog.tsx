@@ -115,9 +115,10 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to save room:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
       toast({
-        title: "Error",
-        description: "Failed to save room. Please try again.",
+        title: "Error Saving Room",
+        description: `Failed to save room. ${errorMessage}`,
         variant: "destructive",
       });
     }

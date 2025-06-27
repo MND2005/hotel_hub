@@ -117,9 +117,10 @@ export function MenuItemFormDialog({ isOpen, setIsOpen, hotelId, menuItem, onSav
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to save menu item:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
       toast({
-        title: "Error",
-        description: "Failed to save item. Please try again.",
+        title: "Error Saving Item",
+        description: `Failed to save item. ${errorMessage}`,
         variant: "destructive",
       });
     }

@@ -131,9 +131,10 @@ export default function HotelDetailsPage() {
 
     } catch (error) {
         console.error("Failed to update hotel:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
         toast({
-            title: "Error",
-            description: "Failed to update hotel. Please try again.",
+            title: "Error Updating Hotel",
+            description: `Failed to update hotel. ${errorMessage}`,
             variant: "destructive"
         });
     }
