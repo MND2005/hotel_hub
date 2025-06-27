@@ -238,35 +238,63 @@ export default function HotelDetailPage() {
                     {rooms.length === 0 ? (
                       <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
                     ) : (
-                      <div className="relative">
-                        <Card key={rooms[currentRoomIndex].id} className="w-full flex flex-col md:flex-row items-center overflow-hidden transition-all duration-300">
-                            <div className="w-full md:w-48 shrink-0">
-                               <HotelCardImage imageUrls={rooms[currentRoomIndex].imageUrls} alt={rooms[currentRoomIndex].type} aiHint={rooms[currentRoomIndex].aiHint} />
-                            </div>
-                            <CardHeader className="flex-1">
-                                <CardTitle>{rooms[currentRoomIndex].type}</CardTitle>
-                                <CardDescription className="flex items-center gap-4 pt-1">
-                                    <span className="flex items-center gap-1"><Users className="w-4 h-4"/> {rooms[currentRoomIndex].capacity} Guests</span>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex items-center gap-4 p-4">
-                                <p className="text-xl font-bold">${rooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                <Button onClick={() => handleBookRoom(rooms[currentRoomIndex])} disabled={!rooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === rooms[currentRoomIndex].id ? "secondary" : "default"}>
-                                  {bookedRoom?.id === rooms[currentRoomIndex].id ? 'Selected' : (rooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
-                                </Button>
-                            </CardContent>
-                        </Card>
-                        {rooms.length > 1 && (
-                            <>
-                                <Button size="icon" variant="ghost" className="absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white md:-left-12" onClick={handlePrevRoom}>
-                                    <ChevronLeft className="h-6 w-6" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white md:-right-12" onClick={handleNextRoom}>
-                                    <ChevronRight className="h-6 w-6" />
-                                </Button>
-                            </>
-                        )}
-                      </div>
+                      <>
+                        {/* Mobile Slideshow View */}
+                        <div className="relative md:hidden">
+                            <Card key={rooms[currentRoomIndex].id} className="w-full flex flex-col overflow-hidden transition-all duration-300">
+                                <CardHeader className="p-0">
+                                    <HotelCardImage imageUrls={rooms[currentRoomIndex].imageUrls} alt={rooms[currentRoomIndex].type} aiHint={rooms[currentRoomIndex].aiHint} />
+                                </CardHeader>
+                                <CardContent className="p-4 flex-grow space-y-2">
+                                    <CardTitle>{rooms[currentRoomIndex].type}</CardTitle>
+                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                        <Users className="w-4 h-4"/> 
+                                        <span>{rooms[currentRoomIndex].capacity} Guests</span>
+                                    </div>
+                                </CardContent>
+                                <CardFooter className="p-4 pt-0 flex items-center justify-between">
+                                    <p className="text-xl font-bold">${rooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                    <Button onClick={() => handleBookRoom(rooms[currentRoomIndex])} disabled={!rooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === rooms[currentRoomIndex].id ? "secondary" : "default"}>
+                                        {bookedRoom?.id === rooms[currentRoomIndex].id ? 'Selected' : (rooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                            {rooms.length > 1 && (
+                                <>
+                                    <Button size="icon" variant="ghost" className="absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handlePrevRoom}>
+                                        <ChevronLeft className="h-6 w-6" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handleNextRoom}>
+                                        <ChevronRight className="h-6 w-6" />
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                        
+                        {/* Desktop Grid View */}
+                        <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+                            {rooms.map((room) => (
+                                <Card key={room.id} className="w-full flex flex-col overflow-hidden">
+                                    <CardHeader className="p-0">
+                                        <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
+                                    </CardHeader>
+                                    <CardContent className="p-4 flex-grow space-y-2">
+                                        <CardTitle>{room.type}</CardTitle>
+                                        <div className="flex items-center gap-1 text-muted-foreground">
+                                            <Users className="w-4 h-4"/> 
+                                            <span>{room.capacity} Guests</span>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="p-4 pt-0 flex items-center justify-between">
+                                        <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                        <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
+                                            {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                      </>
                     )}
                 </TabsContent>
                 <TabsContent value="food" className="mt-6">
