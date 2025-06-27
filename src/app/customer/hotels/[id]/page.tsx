@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Star, MapPin, Users, BedDouble, Plus, Minus } from "lucide-react";
+import { Star, MapPin, Users, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
 import { getHotel } from "@/lib/firebase/hotels";
 import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
@@ -81,6 +81,17 @@ export default function HotelDetailPage() {
   const [bookedRoom, setBookedRoom] = useState<Room | null>(null);
   const [foodOrder, setFoodOrder] = useState<Record<string, { item: MenuItem, quantity: number }>>({});
   const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  // Room slideshow state
+  const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
+
+  const handlePrevRoom = () => {
+    setCurrentRoomIndex(prev => (prev === 0 ? rooms.length - 1 : prev - 1));
+  };
+
+  const handleNextRoom = () => {
+      setCurrentRoomIndex(prev => (prev + 1) % rooms.length);
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -227,26 +238,34 @@ export default function HotelDetailPage() {
                     {rooms.length === 0 ? (
                       <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
                     ) : (
-                      <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 md:flex-col md:overflow-visible md:snap-auto md:gap-4 md:p-0">
-                        {rooms.map(room => (
-                            <Card key={room.id} className="w-[85vw] flex-shrink-0 snap-center md:w-full md:snap-align-none flex flex-col md:flex-row items-center overflow-hidden">
-                                <div className="w-full md:w-48 shrink-0">
-                                   <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
-                                </div>
-                                <CardHeader className="flex-1">
-                                    <CardTitle>{room.type}</CardTitle>
-                                    <CardDescription className="flex items-center gap-4 pt-1">
-                                        <span className="flex items-center gap-1"><Users className="w-4 h-4"/> {room.capacity} Guests</span>
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex items-center gap-4 p-4">
-                                    <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                    <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
-                                      {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))}
+                      <div className="relative">
+                        <Card key={rooms[currentRoomIndex].id} className="w-full flex flex-col md:flex-row items-center overflow-hidden transition-all duration-300">
+                            <div className="w-full md:w-48 shrink-0">
+                               <HotelCardImage imageUrls={rooms[currentRoomIndex].imageUrls} alt={rooms[currentRoomIndex].type} aiHint={rooms[currentRoomIndex].aiHint} />
+                            </div>
+                            <CardHeader className="flex-1">
+                                <CardTitle>{rooms[currentRoomIndex].type}</CardTitle>
+                                <CardDescription className="flex items-center gap-4 pt-1">
+                                    <span className="flex items-center gap-1"><Users className="w-4 h-4"/> {rooms[currentRoomIndex].capacity} Guests</span>
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex items-center gap-4 p-4">
+                                <p className="text-xl font-bold">${rooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                <Button onClick={() => handleBookRoom(rooms[currentRoomIndex])} disabled={!rooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === rooms[currentRoomIndex].id ? "secondary" : "default"}>
+                                  {bookedRoom?.id === rooms[currentRoomIndex].id ? 'Selected' : (rooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                        {rooms.length > 1 && (
+                            <>
+                                <Button size="icon" variant="ghost" className="absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white md:-left-12" onClick={handlePrevRoom}>
+                                    <ChevronLeft className="h-6 w-6" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white md:-right-12" onClick={handleNextRoom}>
+                                    <ChevronRight className="h-6 w-6" />
+                                </Button>
+                            </>
+                        )}
                       </div>
                     )}
                 </TabsContent>
@@ -254,30 +273,30 @@ export default function HotelDetailPage() {
                    {menu.length === 0 ? (
                       <p className="text-muted-foreground">The menu is currently unavailable.</p>
                    ) : (
-                    <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-4 md:grid md:grid-cols-2 md:overflow-visible md:snap-auto md:gap-6 md:p-0">
+                    <div className="space-y-4">
                       {menu.map(item => (
-                          <Card key={item.id} className="w-[85vw] flex-shrink-0 snap-center p-4 md:w-full md:snap-align-none flex flex-col">
-                                <div className="flex items-start gap-4 flex-grow">
-                                    {item.imageUrl && (
-                                        <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover" />
-                                    )}
-                                    <div className='flex-1'>
-                                        <h4 className="font-semibold">{item.name}</h4>
-                                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between mt-4">
-                                    <p className="font-bold text-primary text-lg">${item.price.toFixed(2)}</p>
-                                    <div className="flex items-center gap-2">
-                                        <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
-                                          <Minus className="w-4 h-4"/>
-                                        </Button>
-                                        <span>{foodOrder[item.id]?.quantity || 0}</span>
-                                        <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
-                                          <Plus className="w-4 h-4"/>
-                                        </Button>
-                                    </div>
-                                </div>
+                          <Card key={item.id} className="w-full p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4">
+                              <div className="flex items-start sm:items-center gap-4 w-full sm:w-auto flex-1">
+                                  {item.imageUrl && (
+                                      <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover shrink-0" />
+                                  )}
+                                  <div className='flex-1'>
+                                      <h4 className="font-semibold">{item.name}</h4>
+                                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                                  </div>
+                              </div>
+                              <div className="flex items-center justify-between w-full sm:w-auto shrink-0 mt-4 sm:mt-0 gap-4">
+                                  <p className="font-bold text-primary text-lg">${item.price.toFixed(2)}</p>
+                                  <div className="flex items-center gap-2">
+                                      <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
+                                        <Minus className="w-4 h-4"/>
+                                      </Button>
+                                      <span>{foodOrder[item.id]?.quantity || 0}</span>
+                                      <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
+                                        <Plus className="w-4 h-4"/>
+                                      </Button>
+                                  </div>
+                              </div>
                           </Card>
                       ))}
                     </div>
