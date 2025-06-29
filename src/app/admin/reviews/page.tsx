@@ -17,8 +17,9 @@ import {
     TableRow,
   } from "@/components/ui/table";
 import { getAllReviews, deleteReview } from "@/lib/firebase/reviews";
-import { useState, useEffect, useTransition } from "react";
-import type { Review } from "@/lib/types";
+import { getAllHotelsForAdmin } from "@/lib/firebase/hotels";
+import { useState, useEffect, useTransition, useMemo } from "react";
+import type { Review, Hotel } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -42,17 +43,22 @@ import { StarRating } from "@/components/ui/star-rating";
 
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  const fetchReviews = async () => {
+  const fetchData = async () => {
       setLoading(true);
       try {
-        const reviewsData = await getAllReviews();
+        const [reviewsData, hotelsData] = await Promise.all([
+          getAllReviews(),
+          getAllHotelsForAdmin(),
+        ]);
         reviewsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setReviews(reviewsData);
+        setHotels(hotelsData);
       } catch (error) {
         console.error("Failed to fetch reviews", error);
         toast({ title: "Error", description: "Could not load reviews.", variant: "destructive" });
@@ -64,7 +70,7 @@ export default function AdminReviewsPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        fetchReviews();
+        fetchData();
       } else {
         setLoading(false);
         router.push('/login');
@@ -73,13 +79,14 @@ export default function AdminReviewsPage() {
     return () => unsubscribe();
   }, [router, toast]);
 
+  const hotelMap = useMemo(() => new Map(hotels.map(h => [h.id, h.name])), [hotels]);
 
   const handleDelete = (review: Review) => {
     startTransition(async () => {
         const result = await deleteReview(review.hotelId, review.id);
         if (result.success) {
             toast({ title: "Success", description: "Review has been deleted." });
-            fetchReviews();
+            fetchData();
         } else {
             toast({ title: "Error", description: result.error || "Failed to delete review.", variant: "destructive"});
         }
@@ -97,13 +104,13 @@ export default function AdminReviewsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            {[...Array(5)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
+                            {[...Array(6)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {[...Array(5)].map((_, i) => (
                             <TableRow key={i}>
-                            {[...Array(5)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
+                            {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
                             </TableRow>
                         ))}
                     </TableBody>
@@ -126,6 +133,7 @@ export default function AdminReviewsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Customer</TableHead>
+              <TableHead>Hotel</TableHead>
               <TableHead>Rating</TableHead>
               <TableHead>Comment</TableHead>
               <TableHead>Date</TableHead>
@@ -135,7 +143,7 @@ export default function AdminReviewsPage() {
           <TableBody>
             {reviews.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
+                <TableCell colSpan={6} className="text-center h-24">
                   No reviews found.
                 </TableCell>
               </TableRow>
@@ -143,6 +151,7 @@ export default function AdminReviewsPage() {
               reviews.map((review) => (
                 <TableRow key={review.id}>
                   <TableCell className="font-medium">{review.customerName}</TableCell>
+                  <TableCell className="font-medium">{hotelMap.get(review.hotelId) || 'Unknown'}</TableCell>
                   <TableCell>
                     <StarRating rating={review.rating} readOnly size={16} />
                   </TableCell>
