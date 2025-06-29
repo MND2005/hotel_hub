@@ -49,22 +49,25 @@ export async function addOrUpdateReview(
             let currentTotalRating = (hotelData.avgRating || 0) * (hotelData.reviewCount || 0);
             let currentReviewCount = hotelData.reviewCount || 0;
             
+            const hotelUpdatePayload: { avgRating: number, reviewCount?: number } = {
+                avgRating: 0,
+            };
+            
             if (oldReviewSnap.exists()) { // This is an edit
                 const oldRating = oldReviewSnap.data().rating;
                 currentTotalRating = currentTotalRating - oldRating + rating;
-                // review count doesn't change on edit
+                // review count doesn't change on edit, so we only update avgRating
+                hotelUpdatePayload.avgRating = currentReviewCount > 0 ? currentTotalRating / currentReviewCount : 0;
             } else { // This is a new review
                 currentTotalRating = currentTotalRating + rating;
                 currentReviewCount = currentReviewCount + 1;
+                // review count changes, so we update both fields
+                hotelUpdatePayload.avgRating = currentReviewCount > 0 ? currentTotalRating / currentReviewCount : 0;
+                hotelUpdatePayload.reviewCount = currentReviewCount;
             }
-
-            const newAvgRating = currentReviewCount > 0 ? currentTotalRating / currentReviewCount : 0;
             
             transaction.set(reviewRef, newReviewData);
-            transaction.update(hotelRef, {
-                avgRating: newAvgRating,
-                reviewCount: currentReviewCount
-            });
+            transaction.update(hotelRef, hotelUpdatePayload);
         });
         return { success: true };
     } catch (e: any) {

@@ -2,102 +2,80 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+    
+    // Helper function to check if the requesting user is an admin
     function isAdmin() {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Helper function to check if the UID matches the authenticated user
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
-
-    // A customer can update a hotel, but only to change rating fields during a review.
-    // This function ensures that all other hotel fields remain unchanged by comparing
-    // the hotel document before and after the rating fields have been removed.
-    function isOnlyRatingUpdate() {
-        let oldData = resource.data;
-        let newData = request.resource.data;
-        // The maps are equal if they have the same key-value pairs after removing rating fields.
-        return (oldData - ['avgRating', 'reviewCount']) == (newData - ['avgRating', 'reviewCount']);
+    
+    // Helper function to verify that only rating-related fields are being updated on a hotel document.
+    // This is used for review submission transactions.
+    function isRatingUpdate() {
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      // Case 1: A new review is being created, updating both avgRating and reviewCount.
+      let isCreatingReview = changedKeys.size() == 2 && changedKeys.hasAll(['avgRating', 'reviewCount']);
+      // Case 2: An existing review is being edited, updating only avgRating.
+      let isEditingReview = changedKeys.size() == 1 && changedKeys.has('avgRating');
+      return isCreatingReview || isEditingReview;
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // An admin can read any user profile. A user can read their own profile.
       allow read: if isAdmin() || isOwner(userId);
       // A user can only create their own user document upon signup.
       allow create: if isOwner(userId);
-      // A user can only update their own name.
       allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']);
-      // A user can delete their own account.
       allow delete: if isOwner(userId);
     }
 
-    // Rule for admins to list all reviews from the 'reviews' collection group.
+    // Rules for the 'hotels' collection and its subcollections
+    match /hotels/{hotelId} {
+      allow read: if isAdmin() || isOwner(resource.data.ownerId) || resource.data.isOpen == true;
+      allow create: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner' && isOwner(request.resource.data.ownerId);
+      allow update: if isAdmin() || isOwner(resource.data.ownerId) || (request.auth != null && isRatingUpdate());
+      allow delete: if isAdmin() || isOwner(resource.data.ownerId);
+      
+      match /rooms/{roomId} {
+        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId) || isAdmin();
+        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
+      }
+      
+      match /menuItems/{menuItemId} {
+        allow read: if get(/databases/$(database)/documents/hotels/$(hotelId)).data.isOpen == true || isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId) || isAdmin();
+        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
+      }
+      
+      match /reviews/{reviewId} {
+        allow read: if true;
+        // A customer can create/update their own review (reviewId must match customerId).
+        allow create, update: if isOwner(reviewId);
+        allow delete: if isAdmin();
+      }
+    }
+    
+    // This allows an admin to get a list of all reviews from all hotels.
     match /{path=**}/reviews/{reviewId} {
       allow list: if isAdmin();
     }
 
-    match /hotels/{hotelId} {
-      // Admins and owners of the hotel can read all details.
-      // Anyone can read if the hotel is marked as open.
-      allow read: if isAdmin() || isOwner(resource.data.ownerId) || resource.data.isOpen == true;
-      // Only users with the 'owner' role can create hotels for themselves.
-      allow create: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner' && isOwner(request.resource.data.ownerId);
-      
-      // Admins and owners can update. Customers can update only for reviews.
-      allow update: if isAdmin() || isOwner(resource.data.ownerId) || (request.auth != null && isOnlyRatingUpdate());
-        
-      // Only the hotel owner can delete.
-      allow delete: if isOwner(resource.data.ownerId);
-      
-      // Rules for rooms within a hotel
-      match /rooms/{roomId} {
-        // Anyone can read room details.
-        allow read: if true;
-        // Only the hotel owner can manage rooms.
-        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-      }
-      
-      // Rules for menu items within a hotel
-      match /menuItems/{menuItemId} {
-        // Anyone can read menu details.
-        allow read: if true;
-        // Only the hotel owner can manage menu items.
-        allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
-      }
-      
-      // Rules for reviews within a hotel
-      match /reviews/{reviewId} {
-        // Owners and customers can read reviews. Admins can via the collection group rule above.
-        allow read: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId) || request.auth != null;
-        // The customer who wrote the review can create or update it. reviewId is the userId.
-        allow create, update: if isOwner(reviewId);
-        // Admins can delete reviews.
-        allow delete: if isAdmin();
-      }
-    }
-
     // Rules for the 'orders' collection
     match /orders/{orderId} {
-      // Webhook has full access (no auth context).
-      allow create: if request.auth == null; 
-      // Admins, the customer, and the hotel owner can read an order.
+      allow create: if request.auth == null; // For Stripe Webhook
       allow read: if isAdmin() || isOwner(resource.data.customerId) || isOwner(resource.data.ownerId);
-      // The hotel owner can update order status.
-      allow update: if isOwner(resource.data.ownerId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
-      // No one can delete orders.
+      allow update: if isOwner(resource.data.ownerId);
       allow delete: if false;
     }
-    
+
     // Rules for the 'withdrawals' collection
     match /withdrawals/{withdrawalId} {
-      // Only the owner can create a withdrawal request for themselves.
       allow create: if isOwner(request.resource.data.ownerId);
-      // Admins can read all withdrawals. Owners can read their own.
       allow read: if isAdmin() || isOwner(resource.data.ownerId);
-      // Only admins can approve/deny, and they can only change specific fields.
       allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'processedDate']);
-      // No one can delete withdrawals.
       allow delete: if false;
     }
   }
