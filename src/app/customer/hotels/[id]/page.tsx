@@ -92,6 +92,7 @@ export default function HotelDetailPage() {
 
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [maxPrice, setMaxPrice] = useState(1000);
+  const [minPrice, setMinPrice] = useState(0);
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
 
   const fetchData = useCallback(async (currentUserId?: string) => {
@@ -120,9 +121,11 @@ export default function HotelDetailPage() {
             const prices = roomsData.map(r => r.price);
             const min = Math.floor(Math.min(...prices));
             const max = Math.ceil(Math.max(...prices));
+            setMinPrice(min);
             setMaxPrice(max);
             setPriceRange([min, max]);
         } else {
+            setMinPrice(0);
             setMaxPrice(0);
             setPriceRange([0, 0]);
         }
@@ -246,6 +249,10 @@ export default function HotelDetailPage() {
       fetchData(user?.uid);
   }
 
+  const priceDiff = maxPrice - minPrice;
+  const leftPercent = priceDiff > 0 ? ((priceRange[0] - minPrice) / priceDiff) * 100 : 0;
+  const rightPercent = priceDiff > 0 ? ((priceRange[1] - minPrice) / priceDiff) * 100 : 0;
+
   if (loading) {
     return <HotelDetailSkeleton />;
   }
@@ -302,16 +309,36 @@ export default function HotelDetailPage() {
                         <>
                             <Card className="mb-6 p-4">
                                 <h4 className="font-semibold mb-4 text-center">Filter by Price Range</h4>
-                                <Slider
-                                    value={priceRange}
-                                    onValueChange={(value) => setPriceRange(value as [number, number])}
-                                    max={maxPrice}
-                                    step={1}
-                                    min={rooms.length > 0 ? Math.floor(Math.min(...rooms.map(r => r.price))) : 0}
-                                />
+                                <div className="relative pt-10 px-2">
+                                  <div
+                                    className="absolute top-0 -translate-x-1/2"
+                                    style={{ left: `${leftPercent}%` }}
+                                  >
+                                    <div className="relative rounded-md bg-primary px-2 py-1 text-primary-foreground text-xs whitespace-nowrap">
+                                      ${priceRange[0]}
+                                      <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-primary" />
+                                    </div>
+                                  </div>
+                                  <div
+                                    className="absolute top-0 -translate-x-1/2"
+                                    style={{ left: `${rightPercent}%` }}
+                                  >
+                                    <div className="relative rounded-md bg-primary px-2 py-1 text-primary-foreground text-xs whitespace-nowrap">
+                                      ${priceRange[1]}
+                                      <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-primary" />
+                                    </div>
+                                  </div>
+                                  <Slider
+                                      value={priceRange}
+                                      onValueChange={(value) => setPriceRange(value as [number, number])}
+                                      max={maxPrice}
+                                      step={1}
+                                      min={minPrice}
+                                  />
+                                </div>
                                 <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                                    <span>${priceRange[0]}</span>
-                                    <span>${priceRange[1]}</span>
+                                    <span>${minPrice}</span>
+                                    <span>${maxPrice}</span>
                                 </div>
                             </Card>
 
