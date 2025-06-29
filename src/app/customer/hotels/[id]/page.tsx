@@ -561,7 +561,7 @@ export default function HotelDetailPage() {
                                 <h4 className="font-semibold">Rooms</h4>
                                 {Object.values(bookedRooms).map(({ room, quantity }) => (
                                 <div key={room.id} className="flex justify-between items-center text-sm">
-                                    <span>{room.type} x{quantity}</span>
+                                    <span>{room.type} ({quantity === 1 ? '1 night' : `${quantity} nights`})</span>
                                     <span>${(room.price * quantity).toFixed(2)}</span>
                                 </div>
                                 ))}
@@ -605,3 +605,5 @@ export default function HotelDetailPage() {
     </>
   );
 }
+
+    
