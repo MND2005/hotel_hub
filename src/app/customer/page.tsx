@@ -20,6 +20,7 @@ import { getDistance } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HotelCardImage } from '@/components/app/hotel-card-image';
 import { useToast } from '@/hooks/use-toast';
+import { StarRating } from '@/components/ui/star-rating';
 
 type HotelWithDistance = Hotel & { distance?: number };
 
@@ -171,18 +172,26 @@ export default function CustomerExplorePage() {
                     </div>
                 ) : hotels.map((hotel) => (
                     <Card key={hotel.id} className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
-                        <Link href={`/customer/hotels/${hotel.id}`}>
+                        <Link href={`/customer/hotels/${hotel.id}`} className="flex flex-col h-full">
                             <CardHeader className="p-0">
                                 <HotelCardImage imageUrls={hotel.imageUrls} alt={hotel.name} />
                             </CardHeader>
-                            <CardContent className="p-4">
-                                <div className="flex justify-between items-center mb-2">
-                                <CardTitle className="text-lg truncate">{hotel.name}</CardTitle>
-                                {typeof hotel.distance === 'number' && (
-                                    <Badge variant="secondary">{hotel.distance.toFixed(1)} km</Badge>
-                                )}
+                            <CardContent className="p-4 flex-grow space-y-2">
+                                <div className="flex justify-between items-start mb-1">
+                                    <CardTitle className="text-lg truncate">{hotel.name}</CardTitle>
+                                    {typeof hotel.distance === 'number' && (
+                                        <Badge variant="secondary">{hotel.distance.toFixed(1)} km</Badge>
+                                    )}
                                 </div>
-                                <p className="flex items-center text-sm text-muted-foreground">
+                                {(hotel.reviewCount || 0) > 0 ? (
+                                    <div className="flex items-center gap-1">
+                                        <StarRating rating={hotel.avgRating || 0} readOnly size={16} />
+                                        <span className="text-xs text-muted-foreground">({hotel.reviewCount})</span>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground h-[16px] flex items-center">No reviews yet</div>
+                                )}
+                                <p className="flex items-center text-sm text-muted-foreground pt-1">
                                   <MapPin className="w-4 h-4 mr-1 shrink-0" />
                                   <span className="truncate">{hotel.address}</span>
                                 </p>
