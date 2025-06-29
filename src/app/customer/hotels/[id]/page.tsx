@@ -35,6 +35,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -87,7 +88,7 @@ export default function HotelDetailPage() {
   const [isPending, startTransition] = useTransition();
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
 
-  const [bookedRoom, setBookedRoom] = useState<Room | null>(null);
+  const [bookedRooms, setBookedRooms] = useState<Record<string, { room: Room, quantity: number }>>({});
   const [foodOrder, setFoodOrder] = useState<Record<string, { item: MenuItem, quantity: number }>>({});
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
@@ -168,9 +169,28 @@ export default function HotelDetailPage() {
   const handleNextRoom = () => {
       setCurrentRoomIndex(prev => (prev + 1) % filteredRooms.length);
   };
+  
+  const handleRoomQuantityChange = (room: Room, change: number) => {
+    setBookedRooms(prevOrder => {
+      const existingItem = prevOrder[room.id];
+      const newQuantity = (existingItem?.quantity || 0) + change;
 
-  const handleBookRoom = (room: Room) => {
-    setBookedRoom(prevRoom => prevRoom?.id === room.id ? null : room);
+      if (newQuantity <= 0) {
+        const newOrder = { ...prevOrder };
+        delete newOrder[room.id];
+        return newOrder;
+      }
+      
+      if (newQuantity > room.quantity) {
+          toast({ title: "Limit Reached", description: `Only ${room.quantity} rooms of this type are available.`, variant: 'default' });
+          return prevOrder;
+      }
+
+      return {
+        ...prevOrder,
+        [room.id]: { room, quantity: newQuantity },
+      };
+    });
   };
 
   const handleFoodQuantityChange = (item: MenuItem, change: number) => {
@@ -192,12 +212,14 @@ export default function HotelDetailPage() {
   };
 
   const total = useMemo(() => {
-    const roomPrice = bookedRoom?.price || 0;
+    const roomPrice = Object.values(bookedRooms).reduce((acc, { room, quantity }) => {
+        return acc + (room.price * quantity);
+    }, 0);
     const foodPrice = Object.values(foodOrder).reduce((acc, { item, quantity }) => {
         return acc + (item.price * quantity);
     }, 0);
     return roomPrice + foodPrice;
-  }, [bookedRoom, foodOrder]);
+  }, [bookedRooms, foodOrder]);
 
   const groupedMenu = useMemo(() => {
     return menu.reduce((acc, item) => {
@@ -223,7 +245,7 @@ export default function HotelDetailPage() {
         }
 
         try {
-            const { sessionId } = await createCheckoutSession(user.uid, hotelId, bookedRoom, foodOrder);
+            const { sessionId } = await createCheckoutSession(user.uid, hotelId, bookedRooms, foodOrder);
             const stripe = await stripePromise;
             if (!stripe) throw new Error('Stripe.js has not loaded yet.');
             
@@ -292,6 +314,16 @@ export default function HotelDetailPage() {
                     </div>
                 </div>
                 <p className="text-foreground/80 mb-6">{hotel.description}</p>
+                 {hotel.features && hotel.features.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        {hotel.features.map(feature => (
+                            <Badge key={feature} variant="secondary" className="text-sm py-1 px-3 rounded-md flex items-center gap-2">
+                                <Check className="h-4 w-4" />
+                                {feature}
+                            </Badge>
+                        ))}
+                    </div>
+                )}
             
                 <Tabs defaultValue="rooms">
                     <TabsList>
@@ -307,13 +339,25 @@ export default function HotelDetailPage() {
                             <Card className="mb-6 p-4">
                                 <h4 className="font-semibold mb-4 text-center">Filter by Price Range</h4>
                                 <div className="relative px-2">
+                                 <TooltipProvider>
                                   <Slider
                                       value={priceRange}
                                       onValueChange={(value) => setPriceRange(value as [number, number])}
                                       max={maxPrice}
                                       step={1}
                                       min={minPrice}
+                                      thumbChildren={
+                                        priceRange.map((value, index) => (
+                                          <Tooltip key={index}>
+                                            <TooltipTrigger />
+                                            <TooltipContent>
+                                                ${value}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ))
+                                      }
                                   />
+                                 </TooltipProvider>
                                 </div>
                                 <div className="flex justify-between text-sm text-muted-foreground mt-2">
                                     <span>${priceRange[0]}</span>
@@ -349,9 +393,15 @@ export default function HotelDetailPage() {
                                             </CardContent>
                                             <CardFooter className="p-4 pt-0 flex items-center justify-between">
                                                 <p className="text-xl font-bold">${filteredRooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                                <Button onClick={() => handleBookRoom(filteredRooms[currentRoomIndex])} disabled={!filteredRooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === filteredRooms[currentRoomIndex].id ? "secondary" : "default"}>
-                                                    {bookedRoom?.id === filteredRooms[currentRoomIndex].id ? 'Selected' : (filteredRooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Button size="icon" variant="outline" onClick={() => handleRoomQuantityChange(filteredRooms[currentRoomIndex], -1)} disabled={!bookedRooms[filteredRooms[currentRoomIndex].id]}>
+                                                        <Minus className="w-4 h-4"/>
+                                                    </Button>
+                                                    <span className="font-bold w-4 text-center">{bookedRooms[filteredRooms[currentRoomIndex].id]?.quantity || 0}</span>
+                                                    <Button size="icon" variant="outline" onClick={() => handleRoomQuantityChange(filteredRooms[currentRoomIndex], 1)} disabled={!filteredRooms[currentRoomIndex].isAvailable || filteredRooms[currentRoomIndex].quantity === 0 || (bookedRooms[filteredRooms[currentRoomIndex].id]?.quantity || 0) >= filteredRooms[currentRoomIndex].quantity}>
+                                                        <Plus className="w-4 h-4"/>
+                                                    </Button>
+                                                </div>
                                             </CardFooter>
                                         </Card>
                                         {filteredRooms.length > 1 && (
@@ -391,9 +441,15 @@ export default function HotelDetailPage() {
                                                 </CardContent>
                                                 <CardFooter className="p-4 pt-0 flex items-center justify-between">
                                                     <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                                    <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
-                                                        {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
-                                                    </Button>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button size="icon" variant="outline" onClick={() => handleRoomQuantityChange(room, -1)} disabled={!bookedRooms[room.id]}>
+                                                            <Minus className="w-4 h-4"/>
+                                                        </Button>
+                                                        <span className="font-bold w-4 text-center">{bookedRooms[room.id]?.quantity || 0}</span>
+                                                        <Button size="icon" variant="outline" onClick={() => handleRoomQuantityChange(room, 1)} disabled={!room.isAvailable || room.quantity === 0 || (bookedRooms[room.id]?.quantity || 0) >= room.quantity}>
+                                                            <Plus className="w-4 h-4"/>
+                                                        </Button>
+                                                    </div>
                                                 </CardFooter>
                                             </Card>
                                         ))}
@@ -496,17 +552,19 @@ export default function HotelDetailPage() {
                         <CardTitle>Your Booking</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                    {(!bookedRoom && Object.keys(foodOrder).length === 0) ? (
+                    {(Object.keys(bookedRooms).length === 0 && Object.keys(foodOrder).length === 0) ? (
                         <p className="text-muted-foreground text-sm text-center">Your cart is empty.</p>
                     ) : (
                         <div className="space-y-3">
-                            {bookedRoom && (
+                            {Object.keys(bookedRooms).length > 0 && (
                             <div>
-                                <h4 className="font-semibold">Room</h4>
-                                <div className="flex justify-between items-center text-sm">
-                                <span>{bookedRoom.type} (1 night)</span>
-                                <span>${bookedRoom.price.toFixed(2)}</span>
+                                <h4 className="font-semibold">Rooms</h4>
+                                {Object.values(bookedRooms).map(({ room, quantity }) => (
+                                <div key={room.id} className="flex justify-between items-center text-sm">
+                                    <span>{room.type} x{quantity}</span>
+                                    <span>${(room.price * quantity).toFixed(2)}</span>
                                 </div>
+                                ))}
                             </div>
                             )}
                             {Object.keys(foodOrder).length > 0 && (

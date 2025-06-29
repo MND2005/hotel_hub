@@ -8,7 +8,7 @@ import type { Room, MenuItem } from '@/lib/types';
 export async function createCheckoutSession(
     userId: string,
     hotelId: string,
-    bookedRoom: Room | null, 
+    bookedRooms: Record<string, { room: Room, quantity: number }>,
     foodOrder: Record<string, { item: MenuItem, quantity: number }>
  ) {
     if (!userId) {
@@ -21,21 +21,23 @@ export async function createCheckoutSession(
     const orderItems = [];
     let orderType: 'room' | 'food' | 'combined' = 'food';
 
-    if (bookedRoom) {
-        line_items.push({
-            price_data: {
-                currency: 'usd',
-                product_data: {
-                    name: `${bookedRoom.type} Room`,
-                    description: '1 night stay',
-                    images: bookedRoom.imageUrls.length > 0 ? [bookedRoom.imageUrls[0]] : [],
-                },
-                unit_amount: bookedRoom.price * 100,
-            },
-            quantity: 1,
-        });
-        orderItems.push({ name: bookedRoom.type, quantity: 1, price: bookedRoom.price });
+    if (Object.keys(bookedRooms).length > 0) {
         orderType = 'room';
+        for (const { room, quantity } of Object.values(bookedRooms)) {
+            line_items.push({
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: room.type,
+                        description: 'Hotel Room Booking',
+                        images: room.imageUrls.length > 0 ? [room.imageUrls[0]] : [],
+                    },
+                    unit_amount: room.price * 100,
+                },
+                quantity: quantity,
+            });
+            orderItems.push({ type: 'room', id: room.id, name: room.type, quantity, price: room.price });
+        }
     }
 
     if (Object.keys(foodOrder).length > 0) {
@@ -52,7 +54,7 @@ export async function createCheckoutSession(
                 },
                 quantity: quantity,
             });
-            orderItems.push({ name: item.name, quantity, price: item.price });
+            orderItems.push({ type: 'food', id: item.id, name: item.name, quantity, price: item.price });
         }
         orderType = orderType === 'room' ? 'combined' : 'food';
     }

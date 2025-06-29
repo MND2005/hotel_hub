@@ -154,8 +154,8 @@ export default function HotelRoomsPage() {
                   <CardHeader className="p-0">
                     <div className="relative h-48 w-full">
                        <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
-                      <Badge className="absolute top-2 right-2" variant={room.isAvailable ? 'default' : 'destructive'}>
-                        {room.isAvailable ? 'Available' : 'Booked'}
+                      <Badge className="absolute top-2 right-2" variant={room.isAvailable && room.quantity > 0 ? 'default' : 'destructive'}>
+                        {room.isAvailable && room.quantity > 0 ? 'Available' : 'Unavailable'}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -165,6 +165,10 @@ export default function HotelRoomsPage() {
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
                         <span>{room.capacity} Guests</span>
+                      </div>
+                       <div className="flex items-center gap-1">
+                        <BedDouble className="h-4 w-4" />
+                        <span>{room.quantity} rooms left</span>
                       </div>
                     </div>
                   </CardContent>

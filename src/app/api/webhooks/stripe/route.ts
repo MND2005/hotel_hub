@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { getHotel } from '@/lib/firebase/hotels';
 import { addOrder } from '@/lib/firebase/orders';
+import { decrementRoomQuantity } from '@/lib/firebase/rooms';
 import type { Order } from '@/lib/types';
 
 
@@ -42,13 +43,14 @@ export async function POST(req: Request) {
 
     const { userId, hotelId, items, type } = session.metadata || {};
 
-    if (!userId || !hotelId) {
-        console.error(`[Webhook] Metadata is missing. User ID: ${userId}, Hotel ID: ${hotelId}`);
-        return new Response('User ID or Hotel ID not found in session metadata.', { status: 400 });
+    if (!userId || !hotelId || !items) {
+        console.error(`[Webhook] Metadata is missing. User ID: ${userId}, Hotel ID: ${hotelId}, Items: ${items}`);
+        return new Response('User ID, Hotel ID, or Items not found in session metadata.', { status: 400 });
     }
     console.log(`[Webhook] Metadata found - UserID: ${userId}, HotelID: ${hotelId}`);
     
     const total = session.amount_total ? session.amount_total / 100 : 0;
+    const parsedItems = JSON.parse(items);
 
     try {
         console.log(`[Webhook] Attempting to fetch hotel with ID: ${hotelId}`);
@@ -61,11 +63,18 @@ export async function POST(req: Request) {
         }
         console.log(`[Webhook] Hotel found: ${hotel.name}, OwnerID: ${hotel.ownerId}`);
 
+        // This is what goes into the Order document. It's for display/record keeping.
+        const orderItemsForDoc = parsedItems.map((item: any) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price
+        }));
+
         const orderPayload: Omit<Order, 'id'> = {
             customerId: userId,
             hotelId,
             ownerId: hotel.ownerId,
-            items: JSON.parse(items || '[]'),
+            items: orderItemsForDoc,
             total,
             status: 'confirmed' as const,
             orderDate: new Date().toISOString(),
@@ -75,8 +84,19 @@ export async function POST(req: Request) {
 
         console.log('[Webhook] Attempting to create order in Firestore...');
         await addOrder(orderPayload);
-        
         console.log(`[Webhook] SUCCESS: Order created in Firestore for user ${userId}.`);
+
+        // After successfully creating the order, update inventory.
+        // This makes the process more robust. If order creation fails, we don't touch inventory.
+        console.log('[Webhook] Attempting to update room inventory...');
+        for (const item of parsedItems) {
+            if (item.type === 'room' && item.id && item.quantity > 0) {
+                await decrementRoomQuantity(hotelId, item.id, item.quantity);
+                console.log(`[Webhook] Decremented quantity for room ${item.id} by ${item.quantity}`);
+            }
+        }
+        console.log('[Webhook] SUCCESS: Inventory updated.');
+
     } catch (error: any) {
         console.error('[Webhook] CRITICAL: Failed to process order in database.', error);
         return new Response(`Internal Server Error: ${error.message}`, { status: 500 });

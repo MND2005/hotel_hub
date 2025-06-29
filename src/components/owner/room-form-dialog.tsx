@@ -37,6 +37,7 @@ const roomSchema = z.object({
   type: z.string().min(1, "Room type is required."),
   price: z.coerce.number().positive("Price must be a positive number."),
   capacity: z.coerce.number().int().positive("Capacity must be a positive integer."),
+  quantity: z.coerce.number().int().min(0, "Quantity cannot be negative."),
   isAvailable: z.boolean().default(true),
   features: z.array(z.string()).optional(),
   imageUrls: z.array(z.union([z.string(), z.instanceof(File)]))
@@ -62,6 +63,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
       type: "",
       price: 0,
       capacity: 1,
+      quantity: 1,
       isAvailable: true,
       imageUrls: [],
       features: [],
@@ -77,6 +79,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
             type: "",
             price: 0,
             capacity: 1,
+            quantity: 1,
             isAvailable: true,
             imageUrls: [],
             features: [],
@@ -131,7 +134,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Edit Room" : "Add New Room"}</DialogTitle>
           <DialogDescription>
@@ -139,7 +142,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
             <FormField
               control={form.control}
               name="type"
@@ -183,6 +186,22 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
             </div>
              <FormField
               control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Number of Rooms</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="10" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    How many rooms of this type are available?
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
               name="features"
               render={({ field }) => (
                 <FormItem>
@@ -224,7 +243,10 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                   <div className="space-y-0.5">
-                    <FormLabel>Available for Booking</FormLabel>
+                    <FormLabel>Listed for Booking</FormLabel>
+                    <FormDescription>
+                      If off, this room type won't be visible to customers.
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -232,7 +254,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
                 </FormItem>
               )}
             />
-            <DialogFooter>
+            <DialogFooter className="sticky bottom-0 bg-background pt-4">
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Saving..." : "Save"}
               </Button>

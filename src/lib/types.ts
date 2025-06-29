@@ -17,6 +17,7 @@ export type Hotel = {
   longitude: number;
   isOpen: boolean;
   imageUrls: string[];
+  features?: string[];
   avgRating?: number;
   reviewCount?: number;
 };
@@ -27,6 +28,7 @@ export type Room = {
   type: string;
   price: number;
   capacity: number;
+  quantity: number;
   isAvailable: boolean;
   imageUrls: string[];
   features?: string[];
