@@ -97,20 +97,6 @@ export function HotelPreviewDialog({ hotel, isOpen, onOpenChange }: HotelPreview
                             </div>
                             <p className="text-foreground/80">{hotel.description}</p>
 
-                            {hotel.features && hotel.features.length > 0 && (
-                                <div className="mb-6">
-                                    <h3 className="text-xl font-semibold mb-3">Amenities</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {hotel.features.map(feature => (
-                                            <Badge key={feature} variant="secondary" className="text-sm py-1 px-3 rounded-md flex items-center gap-1.5">
-                                                <Check className="h-3.5 w-3.5" />
-                                                {feature}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
                             {loading ? <PreviewSkeleton /> : (
                                 <Tabs defaultValue="rooms">
                                     <TabsList>
@@ -127,8 +113,18 @@ export function HotelPreviewDialog({ hotel, isOpen, onOpenChange }: HotelPreview
                                                 </div>
                                                 <CardHeader className="flex-1">
                                                     <CardTitle>{room.type}</CardTitle>
-                                                    <CardDescription className="flex items-center gap-4 pt-1">
+                                                     <CardDescription className="flex flex-col gap-2 pt-1">
                                                         <span className="flex items-center gap-1"><Users className="w-4 h-4" /> {room.capacity} Guests</span>
+                                                         {room.features && room.features.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1.5 pt-1">
+                                                                {room.features.map(feature => (
+                                                                    <Badge key={feature} variant="secondary" className="text-xs py-0.5 px-2 rounded-md flex items-center gap-1">
+                                                                        <Check className="h-3 w-3" />
+                                                                        {feature}
+                                                                    </Badge>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </CardDescription>
                                                 </CardHeader>
                                                 <CardContent className="flex items-center gap-4 p-4">

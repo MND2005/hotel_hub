@@ -25,6 +25,7 @@ export async function getRoomsByHotel(hotelId: string): Promise<Room[]> {
             id: doc.id, 
             ...data,
             imageUrls: data.imageUrls || [],
+            features: data.features || [],
         } as Room;
     });
 }

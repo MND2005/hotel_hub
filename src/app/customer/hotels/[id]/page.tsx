@@ -293,20 +293,6 @@ export default function HotelDetailPage() {
                 </div>
                 <p className="text-foreground/80 mb-6">{hotel.description}</p>
             
-                {hotel.features && hotel.features.length > 0 && (
-                    <div className="mb-6">
-                        <h2 className="text-xl font-semibold mb-3">Amenities</h2>
-                        <div className="flex flex-wrap gap-2">
-                            {hotel.features.map(feature => (
-                                <Badge key={feature} variant="secondary" className="text-sm py-1 px-3 rounded-md flex items-center gap-1.5">
-                                    <Check className="h-3.5 w-3.5" />
-                                    {feature}
-                                </Badge>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 <Tabs defaultValue="rooms">
                     <TabsList>
                         <TabsTrigger value="rooms">Book a Room</TabsTrigger>
@@ -350,6 +336,16 @@ export default function HotelDetailPage() {
                                                     <Users className="w-4 h-4"/> 
                                                     <span>{filteredRooms[currentRoomIndex].capacity} Guests</span>
                                                 </div>
+                                                {filteredRooms[currentRoomIndex].features && filteredRooms[currentRoomIndex].features!.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                                        {filteredRooms[currentRoomIndex].features!.map(feature => (
+                                                            <Badge key={feature} variant="secondary" className="text-xs py-0.5 px-2 rounded-md flex items-center gap-1">
+                                                                <Check className="h-3 w-3" />
+                                                                {feature}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </CardContent>
                                             <CardFooter className="p-4 pt-0 flex items-center justify-between">
                                                 <p className="text-xl font-bold">${filteredRooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
@@ -382,6 +378,16 @@ export default function HotelDetailPage() {
                                                         <Users className="w-4 h-4"/> 
                                                         <span>{room.capacity} Guests</span>
                                                     </div>
+                                                    {room.features && room.features.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1.5 pt-1">
+                                                            {room.features.map(feature => (
+                                                                <Badge key={feature} variant="secondary" className="text-xs py-0.5 px-2 rounded-md flex items-center gap-1">
+                                                                    <Check className="h-3 w-3" />
+                                                                    {feature}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </CardContent>
                                                 <CardFooter className="p-4 pt-0 flex items-center justify-between">
                                                     <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>

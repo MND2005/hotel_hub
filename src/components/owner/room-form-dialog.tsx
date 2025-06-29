@@ -31,12 +31,14 @@ import { addRoom, updateRoom } from "@/lib/firebase/rooms";
 import { ImageUploader } from "@/components/app/image-uploader";
 import { auth } from "@/lib/firebase";
 import { uploadImage } from "@/lib/firebase/storage";
+import { FeatureInput } from "../app/feature-input";
 
 const roomSchema = z.object({
   type: z.string().min(1, "Room type is required."),
   price: z.coerce.number().positive("Price must be a positive number."),
   capacity: z.coerce.number().int().positive("Capacity must be a positive integer."),
   isAvailable: z.boolean().default(true),
+  features: z.array(z.string()).optional(),
   imageUrls: z.array(z.union([z.string(), z.instanceof(File)]))
     .min(1, "At least one image is required.")
     .max(2, "You can upload a maximum of 2 images."),
@@ -62,13 +64,14 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
       capacity: 1,
       isAvailable: true,
       imageUrls: [],
+      features: [],
     },
   });
 
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && room) {
-        form.reset({ ...room, imageUrls: room.imageUrls || [] });
+        form.reset({ ...room, imageUrls: room.imageUrls || [], features: room.features || [] });
       } else {
         form.reset({
             type: "",
@@ -76,6 +79,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
             capacity: 1,
             isAvailable: true,
             imageUrls: [],
+            features: [],
         });
       }
     }
@@ -99,6 +103,7 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
 
       const roomPayload = {
         ...values,
+        features: values.features || [],
         imageUrls: finalImageUrls,
         hotelId,
         aiHint: 'hotel room',
@@ -176,6 +181,22 @@ export function RoomFormDialog({ isOpen, setIsOpen, hotelId, room, onSave }: Roo
                 )}
                 />
             </div>
+             <FormField
+              control={form.control}
+              name="features"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Room Features</FormLabel>
+                  <FormControl>
+                    <FeatureInput value={field.value || []} onChange={field.onChange} />
+                  </FormControl>
+                  <FormDescription>
+                    List key features (e.g., AC, Sea View). Press Enter or comma after each.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="imageUrls"

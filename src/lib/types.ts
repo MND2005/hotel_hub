@@ -19,7 +19,6 @@ export type Hotel = {
   imageUrls: string[];
   avgRating?: number;
   reviewCount?: number;
-  features?: string[];
 };
 
 export type Room = {
@@ -30,6 +29,7 @@ export type Room = {
   capacity: number;
   isAvailable: boolean;
   imageUrls: string[];
+  features?: string[];
   aiHint?: string;
 };
 
