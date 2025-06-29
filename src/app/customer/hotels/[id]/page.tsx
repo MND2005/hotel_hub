@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Star, MapPin, Users, Plus, Minus, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { Star, MapPin, Users, Plus, Minus, ChevronLeft, ChevronRight, MessageSquare, Check } from "lucide-react";
 import { getHotel } from "@/lib/firebase/hotels";
 import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
@@ -34,6 +34,7 @@ import { ReviewFormDialog } from "@/components/app/review-form-dialog";
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -292,6 +293,20 @@ export default function HotelDetailPage() {
                 </div>
                 <p className="text-foreground/80 mb-6">{hotel.description}</p>
             
+                {hotel.features && hotel.features.length > 0 && (
+                    <div className="mb-6">
+                        <h2 className="text-xl font-semibold mb-3">Amenities</h2>
+                        <div className="flex flex-wrap gap-2">
+                            {hotel.features.map(feature => (
+                                <Badge key={feature} variant="secondary" className="text-sm py-1 px-3 rounded-md flex items-center gap-1.5">
+                                    <Check className="h-3.5 w-3.5" />
+                                    {feature}
+                                </Badge>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <Tabs defaultValue="rooms">
                     <TabsList>
                         <TabsTrigger value="rooms">Book a Room</TabsTrigger>

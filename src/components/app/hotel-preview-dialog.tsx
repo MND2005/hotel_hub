@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, MapPin, Users } from "lucide-react";
+import { Star, MapPin, Users, Check } from "lucide-react";
 import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
 import type { Hotel, Room, MenuItem } from "@/lib/types";
@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ImageGallery } from "@/components/app/image-gallery";
 import Image from "next/image";
 import { HotelCardImage } from "@/components/app/hotel-card-image";
+import { Badge } from '@/components/ui/badge';
 
 type HotelPreviewDialogProps = {
     hotel: Hotel | null;
@@ -95,6 +96,20 @@ export function HotelPreviewDialog({ hotel, isOpen, onOpenChange }: HotelPreview
                                 </div>
                             </div>
                             <p className="text-foreground/80">{hotel.description}</p>
+
+                            {hotel.features && hotel.features.length > 0 && (
+                                <div className="mb-6">
+                                    <h3 className="text-xl font-semibold mb-3">Amenities</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {hotel.features.map(feature => (
+                                            <Badge key={feature} variant="secondary" className="text-sm py-1 px-3 rounded-md flex items-center gap-1.5">
+                                                <Check className="h-3.5 w-3.5" />
+                                                {feature}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {loading ? <PreviewSkeleton /> : (
                                 <Tabs defaultValue="rooms">

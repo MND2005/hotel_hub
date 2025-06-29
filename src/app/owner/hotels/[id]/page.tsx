@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ImageUploader } from "@/components/app/image-uploader";
 import { uploadImage } from "@/lib/firebase/storage";
 import { auth } from "@/lib/firebase";
+import { FeatureInput } from "@/components/app/feature-input";
 
 const hotelDetailsSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -42,6 +43,7 @@ const hotelDetailsSchema = z.object({
   latitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   longitude: z.number().refine(val => val !== 0, { message: 'Please select a location on the map.' }),
   isOpen: z.boolean().default(true),
+  features: z.array(z.string()).optional(),
   imageUrls: z.array(z.union([z.string(), z.instanceof(File)]))
     .min(1, "At least one image is required.")
     .max(5, "You can upload a maximum of 5 images."),
@@ -67,6 +69,7 @@ export default function HotelDetailsPage() {
       longitude: 0,
       isOpen: true,
       imageUrls: [],
+      features: [],
     },
   });
 
@@ -76,7 +79,7 @@ export default function HotelDetailsPage() {
     try {
       const data = await getHotel(hotelId);
       if (data) {
-        form.reset({ ...data, imageUrls: data.imageUrls || [] });
+        form.reset({ ...data, imageUrls: data.imageUrls || [], features: data.features || [] });
         setMarkerPosition({ lat: data.latitude, lng: data.longitude });
       } else {
         toast({
@@ -249,6 +252,23 @@ export default function HotelDetailsPage() {
                     />
                 </div>
             </div>
+
+            <FormField
+              control={form.control}
+              name="features"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Hotel Features</FormLabel>
+                  <FormControl>
+                    <FeatureInput value={field.value || []} onChange={field.onChange} />
+                  </FormControl>
+                  <FormDescription>
+                    List key features (e.g., AC, WiFi, Pool). Press Enter or comma after each.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

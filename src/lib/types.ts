@@ -19,6 +19,7 @@ export type Hotel = {
   imageUrls: string[];
   avgRating?: number;
   reviewCount?: number;
+  features?: string[];
 };
 
 export type Room = {
