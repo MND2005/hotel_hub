@@ -33,6 +33,7 @@ import { StarRating } from "@/components/ui/star-rating";
 import { ReviewFormDialog } from "@/components/app/review-form-dialog";
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Slider } from "@/components/ui/slider";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -89,15 +90,9 @@ export default function HotelDetailPage() {
   const [foodOrder, setFoodOrder] = useState<Record<string, { item: MenuItem, quantity: number }>>({});
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [maxPrice, setMaxPrice] = useState(1000);
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
-
-  const handlePrevRoom = () => {
-    setCurrentRoomIndex(prev => (prev === 0 ? rooms.length - 1 : prev - 1));
-  };
-
-  const handleNextRoom = () => {
-      setCurrentRoomIndex(prev => (prev + 1) % rooms.length);
-  };
 
   const fetchData = useCallback(async (currentUserId?: string) => {
     if (!hotelId) return;
@@ -121,6 +116,17 @@ export default function HotelDetailPage() {
         reviewsData.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setReviews(reviewsData);
 
+        if (roomsData.length > 0) {
+            const prices = roomsData.map(r => r.price);
+            const min = Math.floor(Math.min(...prices));
+            const max = Math.ceil(Math.max(...prices));
+            setMaxPrice(max);
+            setPriceRange([min, max]);
+        } else {
+            setMaxPrice(0);
+            setPriceRange([0, 0]);
+        }
+
         if(currentUserId) {
             const existingReview = await getUserReviewForHotel(hotelId, currentUserId);
             setUserReview(existingReview);
@@ -133,7 +139,6 @@ export default function HotelDetailPage() {
     }
   }, [hotelId, router]);
 
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -142,6 +147,23 @@ export default function HotelDetailPage() {
     return () => unsubscribe();
   }, [fetchData]);
 
+  const filteredRooms = useMemo(() => {
+    return rooms.filter(
+      room => room.price >= priceRange[0] && room.price <= priceRange[1]
+    );
+  }, [rooms, priceRange]);
+
+  useEffect(() => {
+      setCurrentRoomIndex(0);
+  }, [priceRange]);
+
+  const handlePrevRoom = () => {
+    setCurrentRoomIndex(prev => (prev === 0 ? filteredRooms.length - 1 : prev - 1));
+  };
+
+  const handleNextRoom = () => {
+      setCurrentRoomIndex(prev => (prev + 1) % filteredRooms.length);
+  };
 
   const handleBookRoom = (room: Room) => {
     setBookedRoom(prevRoom => prevRoom?.id === room.id ? null : room);
@@ -278,59 +300,80 @@ export default function HotelDetailPage() {
                         <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
                         ) : (
                         <>
-                            <div className="relative md:hidden">
-                                <Card key={rooms[currentRoomIndex].id} className="w-full flex flex-col overflow-hidden transition-all duration-300">
-                                    <CardHeader className="p-0">
-                                        <HotelCardImage imageUrls={rooms[currentRoomIndex].imageUrls} alt={rooms[currentRoomIndex].type} aiHint={rooms[currentRoomIndex].aiHint} />
-                                    </CardHeader>
-                                    <CardContent className="p-4 flex-grow space-y-2">
-                                        <CardTitle>{rooms[currentRoomIndex].type}</CardTitle>
-                                        <div className="flex items-center gap-1 text-muted-foreground">
-                                            <Users className="w-4 h-4"/> 
-                                            <span>{rooms[currentRoomIndex].capacity} Guests</span>
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="p-4 pt-0 flex items-center justify-between">
-                                        <p className="text-xl font-bold">${rooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                        <Button onClick={() => handleBookRoom(rooms[currentRoomIndex])} disabled={!rooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === rooms[currentRoomIndex].id ? "secondary" : "default"}>
-                                            {bookedRoom?.id === rooms[currentRoomIndex].id ? 'Selected' : (rooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
-                                        </Button>
-                                    </CardFooter>
-                                </Card>
-                                {rooms.length > 1 && (
-                                    <>
-                                        <Button size="icon" variant="ghost" className="absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handlePrevRoom}>
-                                            <ChevronLeft className="h-6 w-6" />
-                                        </Button>
-                                        <Button size="icon" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handleNextRoom}>
-                                            <ChevronRight className="h-6 w-6" />
-                                        </Button>
-                                    </>
-                                )}
-                            </div>
-                            
-                            <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 gap-6">
-                                {rooms.map((room) => (
-                                    <Card key={room.id} className="w-full flex flex-col overflow-hidden">
-                                        <CardHeader className="p-0">
-                                            <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
-                                        </CardHeader>
-                                        <CardContent className="p-4 flex-grow space-y-2">
-                                            <CardTitle>{room.type}</CardTitle>
-                                            <div className="flex items-center gap-1 text-muted-foreground">
-                                                <Users className="w-4 h-4"/> 
-                                                <span>{room.capacity} Guests</span>
-                                            </div>
-                                        </CardContent>
-                                        <CardFooter className="p-4 pt-0 flex items-center justify-between">
-                                            <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                            <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
-                                                {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
-                                            </Button>
-                                        </CardFooter>
-                                    </Card>
-                                ))}
-                            </div>
+                            <Card className="mb-6 p-4">
+                                <h4 className="font-semibold mb-4 text-center">Filter by Price Range</h4>
+                                <Slider
+                                    value={priceRange}
+                                    onValueChange={(value) => setPriceRange(value as [number, number])}
+                                    max={maxPrice}
+                                    step={1}
+                                    min={rooms.length > 0 ? Math.floor(Math.min(...rooms.map(r => r.price))) : 0}
+                                />
+                                <div className="flex justify-between text-sm text-muted-foreground mt-2">
+                                    <span>${priceRange[0]}</span>
+                                    <span>${priceRange[1]}</span>
+                                </div>
+                            </Card>
+
+                            {filteredRooms.length === 0 ? (
+                                <p className="text-muted-foreground text-center py-8">No rooms match your price filter.</p>
+                            ) : (
+                                <>
+                                    <div className="relative md:hidden">
+                                        <Card key={filteredRooms[currentRoomIndex].id} className="w-full flex flex-col overflow-hidden transition-all duration-300">
+                                            <CardHeader className="p-0">
+                                                <HotelCardImage imageUrls={filteredRooms[currentRoomIndex].imageUrls} alt={filteredRooms[currentRoomIndex].type} aiHint={filteredRooms[currentRoomIndex].aiHint} />
+                                            </CardHeader>
+                                            <CardContent className="p-4 flex-grow space-y-2">
+                                                <CardTitle>{filteredRooms[currentRoomIndex].type}</CardTitle>
+                                                <div className="flex items-center gap-1 text-muted-foreground">
+                                                    <Users className="w-4 h-4"/> 
+                                                    <span>{filteredRooms[currentRoomIndex].capacity} Guests</span>
+                                                </div>
+                                            </CardContent>
+                                            <CardFooter className="p-4 pt-0 flex items-center justify-between">
+                                                <p className="text-xl font-bold">${filteredRooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                                <Button onClick={() => handleBookRoom(filteredRooms[currentRoomIndex])} disabled={!filteredRooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === filteredRooms[currentRoomIndex].id ? "secondary" : "default"}>
+                                                    {bookedRoom?.id === filteredRooms[currentRoomIndex].id ? 'Selected' : (filteredRooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
+                                                </Button>
+                                            </CardFooter>
+                                        </Card>
+                                        {filteredRooms.length > 1 && (
+                                            <>
+                                                <Button size="icon" variant="ghost" className="absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handlePrevRoom}>
+                                                    <ChevronLeft className="h-6 w-6" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handleNextRoom}>
+                                                    <ChevronRight className="h-6 w-6" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+                                        {filteredRooms.map((room) => (
+                                            <Card key={room.id} className="w-full flex flex-col overflow-hidden">
+                                                <CardHeader className="p-0">
+                                                    <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
+                                                </CardHeader>
+                                                <CardContent className="p-4 flex-grow space-y-2">
+                                                    <CardTitle>{room.type}</CardTitle>
+                                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                                        <Users className="w-4 h-4"/> 
+                                                        <span>{room.capacity} Guests</span>
+                                                    </div>
+                                                </CardContent>
+                                                <CardFooter className="p-4 pt-0 flex items-center justify-between">
+                                                    <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                                    <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
+                                                        {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
+                                                    </Button>
+                                                </CardFooter>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </>
                         )}
                     </TabsContent>
