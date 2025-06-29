@@ -249,10 +249,6 @@ export default function HotelDetailPage() {
       fetchData(user?.uid);
   }
 
-  const priceDiff = maxPrice - minPrice;
-  const leftPercent = priceDiff > 0 ? ((priceRange[0] - minPrice) / priceDiff) * 100 : 0;
-  const rightPercent = priceDiff > 0 ? ((priceRange[1] - minPrice) / priceDiff) * 100 : 0;
-
   if (loading) {
     return <HotelDetailSkeleton />;
   }
@@ -309,25 +305,7 @@ export default function HotelDetailPage() {
                         <>
                             <Card className="mb-6 p-4">
                                 <h4 className="font-semibold mb-4 text-center">Filter by Price Range</h4>
-                                <div className="relative pt-10 px-2">
-                                  <div
-                                    className="absolute top-0 -translate-x-1/2"
-                                    style={{ left: `${leftPercent}%` }}
-                                  >
-                                    <div className="relative rounded-md bg-primary px-2 py-1 text-primary-foreground text-xs whitespace-nowrap">
-                                      ${priceRange[0]}
-                                      <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-primary" />
-                                    </div>
-                                  </div>
-                                  <div
-                                    className="absolute top-0 -translate-x-1/2"
-                                    style={{ left: `${rightPercent}%` }}
-                                  >
-                                    <div className="relative rounded-md bg-primary px-2 py-1 text-primary-foreground text-xs whitespace-nowrap">
-                                      ${priceRange[1]}
-                                      <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-primary" />
-                                    </div>
-                                  </div>
+                                <div className="relative px-2">
                                   <Slider
                                       value={priceRange}
                                       onValueChange={(value) => setPriceRange(value as [number, number])}
@@ -337,8 +315,8 @@ export default function HotelDetailPage() {
                                   />
                                 </div>
                                 <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                                    <span>${minPrice}</span>
-                                    <span>${maxPrice}</span>
+                                    <span>${priceRange[0]}</span>
+                                    <span>${priceRange[1]}</span>
                                 </div>
                             </Card>
 
