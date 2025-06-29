@@ -17,6 +17,8 @@ export type Hotel = {
   longitude: number;
   isOpen: boolean;
   imageUrls: string[];
+  avgRating?: number;
+  reviewCount?: number;
 };
 
 export type Room = {
@@ -61,4 +63,14 @@ export type Withdrawal = {
   status: 'pending' | 'approved' | 'denied';
   requestDate: string;
   processedDate?: string;
+};
+
+export type Review = {
+    id: string;
+    hotelId: string;
+    customerId: string;
+    customerName: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
 };

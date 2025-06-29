@@ -6,7 +6,6 @@ service cloud.firestore {
   
     // Helper function to check if the requesting user is an admin
     function isAdmin() {
-      // Check if the user is authenticated and if their user document has role 'admin'
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
@@ -15,14 +14,39 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+        return request.auth != null;
+    }
+    
+    // Helper function to check if a hotel update only touches rating fields.
+    // This is used to allow a customer to submit a review, which triggers a transaction
+    // to update the hotel's average rating and review count.
+    function isRatingUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        
+        // This logic handles two cases:
+        // 1. Editing a review (only avgRating changes).
+        // 2. Creating a new review (avgRating and reviewCount change).
+        let isOnlyRatingKeys = changed.hasOnly(['avgRating', 'reviewCount']) || changed.hasOnly(['avgRating']);
+        
+        // As an extra layer of security, ensure no other critical fields are being changed.
+        let essentialKeysUnchanged = request.resource.data.name == resource.data.name &&
+                                     request.resource.data.ownerId == resource.data.ownerId &&
+                                     request.resource.data.address == resource.data.address &&
+                                     request.resource.data.description == resource.data.description;
+
+        return isAuthenticated() && essentialKeysUnchanged && isOnlyRatingKeys;
+    }
+
     // Rules for the 'users' collection
     match /users/{userId} {
       // An admin can read any user profile. A user can read their own profile.
       allow read: if isAdmin() || isOwner(userId);
       // Anyone can create a user account (signup)
       allow create: if true;
-      // A user can only update their own document
-      allow update: if isOwner(userId);
+      // A user can only update their own name.
+      allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']);
       // A user can delete their own account.
       allow delete: if isOwner(userId);
     }
@@ -34,8 +58,11 @@ service cloud.firestore {
       allow read: if isAdmin() || isOwner(resource.data.ownerId) || resource.data.isOpen == true;
       // Only users with the 'owner' role can create hotels for themselves.
       allow create: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner' && isOwner(request.resource.data.ownerId);
+      
       // Admins and the hotel owner can update.
-      allow update: if isAdmin() || isOwner(resource.data.ownerId);
+      // Customers can also update rating fields as part of a review transaction.
+      allow update: if isAdmin() || isOwner(resource.data.ownerId) || isRatingUpdate();
+        
       // Only the hotel owner can delete.
       allow delete: if isOwner(resource.data.ownerId);
       
@@ -54,16 +81,31 @@ service cloud.firestore {
         // Only the hotel owner can manage menu items.
         allow create, update, delete: if isOwner(get(/databases/$(database)/documents/hotels/$(hotelId)).data.ownerId);
       }
+      
+      // Rules for reviews within a hotel
+      match /reviews/{reviewId} {
+        // Anyone can read reviews. Hotel owner can also read.
+        allow read: if true;
+        // The customer who wrote the review can create/update it.
+        // The reviewId must be the customer's UID to prevent spoofing.
+        allow create, update: if isOwner(reviewId) && request.resource.data.customerId == request.auth.uid;
+        // Only an admin can delete a review.
+        allow delete: if isAdmin();
+      }
+    }
+    
+    // This allows admins to query all reviews across all hotels for the moderation page.
+    match /reviews/{reviewId} {
+        allow list: if isAdmin();
     }
 
     // Rules for the 'orders' collection
     match /orders/{orderId} {
       // Webhook has full access (no auth context), so must be open.
-      // For production, use a more secure method like a secret key.
       allow create: if request.auth == null; 
       // Admins, the customer, and the hotel owner can read an order.
       allow read: if isAdmin() || isOwner(resource.data.customerId) || isOwner(resource.data.ownerId);
-      // Only the hotel owner can update order status (e.g., to 'completed').
+      // The hotel owner can update order status.
       allow update: if isOwner(resource.data.ownerId);
       // No one can delete orders.
       allow delete: if false;

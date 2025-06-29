@@ -12,13 +12,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Star, MapPin, Users, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, MapPin, Users, Plus, Minus, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { getHotel } from "@/lib/firebase/hotels";
 import { getRoomsByHotel } from "@/lib/firebase/rooms";
 import { getMenuItemsByHotel } from "@/lib/firebase/menu";
+import { getReviewsByHotel, getUserReviewForHotel } from "@/lib/firebase/reviews";
 import { useRouter, useParams } from 'next/navigation';
-import type { Hotel, Room, MenuItem } from "@/lib/types";
-import { useState, useEffect, useMemo, useTransition } from "react";
+import type { Hotel, Room, MenuItem, Review } from "@/lib/types";
+import { useState, useEffect, useMemo, useTransition, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageGallery } from "@/components/app/image-gallery";
 import Image from "next/image";
@@ -28,6 +29,10 @@ import { createCheckoutSession } from './actions';
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+import { StarRating } from "@/components/ui/star-rating";
+import { ReviewFormDialog } from "@/components/app/review-form-dialog";
+import { formatDistanceToNow } from 'date-fns';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -74,15 +79,16 @@ export default function HotelDetailPage() {
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [userReview, setUserReview] = useState<Review | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
 
-  // Cart state
   const [bookedRoom, setBookedRoom] = useState<Room | null>(null);
   const [foodOrder, setFoodOrder] = useState<Record<string, { item: MenuItem, quantity: number }>>({});
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
-  // Room slideshow state
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
 
   const handlePrevRoom = () => {
@@ -93,41 +99,49 @@ export default function HotelDetailPage() {
       setCurrentRoomIndex(prev => (prev + 1) % rooms.length);
   };
 
+  const fetchData = useCallback(async (currentUserId?: string) => {
+    if (!hotelId) return;
+    setLoading(true);
+    try {
+        const [hotelData, roomsData, menuData, reviewsData] = await Promise.all([
+            getHotel(hotelId),
+            getRoomsByHotel(hotelId),
+            getMenuItemsByHotel(hotelId),
+            getReviewsByHotel(hotelId),
+        ]);
+
+        if (!hotelData) {
+            router.push('/not-found');
+            return;
+        }
+
+        setHotel(hotelData);
+        setRooms(roomsData);
+        setMenu(menuData);
+        reviewsData.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setReviews(reviewsData);
+
+        if(currentUserId) {
+            const existingReview = await getUserReviewForHotel(hotelId, currentUserId);
+            setUserReview(existingReview);
+        }
+
+    } catch (error) {
+        console.error("Failed to fetch hotel details", error);
+    } finally {
+        setLoading(false);
+    }
+  }, [hotelId, router]);
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      fetchData(currentUser?.uid);
     });
     return () => unsubscribe();
-  }, []);
+  }, [fetchData]);
 
-
-  useEffect(() => {
-    const fetchData = async () => {
-        if (!hotelId) return;
-        setLoading(true);
-        try {
-            const [hotelData, roomsData, menuData] = await Promise.all([
-                getHotel(hotelId),
-                getRoomsByHotel(hotelId),
-                getMenuItemsByHotel(hotelId)
-            ]);
-
-            if (!hotelData) {
-                router.push('/not-found');
-                return;
-            }
-
-            setHotel(hotelData);
-            setRooms(roomsData);
-            setMenu(menuData);
-        } catch (error) {
-            console.error("Failed to fetch hotel details", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-    fetchData();
-  }, [hotelId, router]);
 
   const handleBookRoom = (room: Room) => {
     setBookedRoom(prevRoom => prevRoom?.id === room.id ? null : room);
@@ -206,6 +220,10 @@ export default function HotelDetailPage() {
     });
   }
 
+  const handleReviewSaved = () => {
+      fetchData(user?.uid);
+  }
+
   if (loading) {
     return <HotelDetailSkeleton />;
   }
@@ -220,188 +238,243 @@ export default function HotelDetailPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-            <ImageGallery imageUrls={hotel.imageUrls} alt={hotel.name} />
-        </div>
-      
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-            <h1 className="text-3xl font-bold tracking-tight mb-2">{hotel.name}</h1>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span>0 reviews</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>{hotel.address}</span>
-                </div>
+    <>
+        <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div className="mb-8">
+                <ImageGallery imageUrls={hotel.imageUrls} alt={hotel.name} />
             </div>
-            <p className="text-foreground/80 mb-6">{hotel.description}</p>
         
-            <Tabs defaultValue="rooms">
-                <TabsList>
-                    <TabsTrigger value="rooms">Book a Room</TabsTrigger>
-                    <TabsTrigger value="food">Order Food</TabsTrigger>
-                </TabsList>
-                <TabsContent value="rooms" className="mt-6">
-                    {rooms.length === 0 ? (
-                      <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
-                    ) : (
-                      <>
-                        {/* Mobile Slideshow View */}
-                        <div className="relative md:hidden">
-                            <Card key={rooms[currentRoomIndex].id} className="w-full flex flex-col overflow-hidden transition-all duration-300">
-                                <CardHeader className="p-0">
-                                    <HotelCardImage imageUrls={rooms[currentRoomIndex].imageUrls} alt={rooms[currentRoomIndex].type} aiHint={rooms[currentRoomIndex].aiHint} />
-                                </CardHeader>
-                                <CardContent className="p-4 flex-grow space-y-2">
-                                    <CardTitle>{rooms[currentRoomIndex].type}</CardTitle>
-                                    <div className="flex items-center gap-1 text-muted-foreground">
-                                        <Users className="w-4 h-4"/> 
-                                        <span>{rooms[currentRoomIndex].capacity} Guests</span>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="p-4 pt-0 flex items-center justify-between">
-                                    <p className="text-xl font-bold">${rooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                    <Button onClick={() => handleBookRoom(rooms[currentRoomIndex])} disabled={!rooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === rooms[currentRoomIndex].id ? "secondary" : "default"}>
-                                        {bookedRoom?.id === rooms[currentRoomIndex].id ? 'Selected' : (rooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-                            {rooms.length > 1 && (
-                                <>
-                                    <Button size="icon" variant="ghost" className="absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handlePrevRoom}>
-                                        <ChevronLeft className="h-6 w-6" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handleNextRoom}>
-                                        <ChevronRight className="h-6 w-6" />
-                                    </Button>
-                                </>
-                            )}
+        <div className="grid gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+                <h1 className="text-3xl font-bold tracking-tight mb-2">{hotel.name}</h1>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                    {(hotel.reviewCount || 0) > 0 ? (
+                        <div className="flex items-center gap-2">
+                            <StarRating rating={hotel.avgRating || 0} readOnly size={16} />
+                            <span className="font-medium">{(hotel.avgRating || 0).toFixed(1)}</span>
+                            <span>({hotel.reviewCount} reviews)</span>
                         </div>
-                        
-                        {/* Desktop Grid View */}
-                        <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 gap-6">
-                            {rooms.map((room) => (
-                                <Card key={room.id} className="w-full flex flex-col overflow-hidden">
+                    ) : (
+                        <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-muted-foreground" />
+                            <span>No reviews yet</span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        <span>{hotel.address}</span>
+                    </div>
+                </div>
+                <p className="text-foreground/80 mb-6">{hotel.description}</p>
+            
+                <Tabs defaultValue="rooms">
+                    <TabsList>
+                        <TabsTrigger value="rooms">Book a Room</TabsTrigger>
+                        <TabsTrigger value="food">Order Food</TabsTrigger>
+                        <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="rooms" className="mt-6">
+                        {rooms.length === 0 ? (
+                        <p className="text-muted-foreground">No rooms available for booking at the moment.</p>
+                        ) : (
+                        <>
+                            <div className="relative md:hidden">
+                                <Card key={rooms[currentRoomIndex].id} className="w-full flex flex-col overflow-hidden transition-all duration-300">
                                     <CardHeader className="p-0">
-                                        <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
+                                        <HotelCardImage imageUrls={rooms[currentRoomIndex].imageUrls} alt={rooms[currentRoomIndex].type} aiHint={rooms[currentRoomIndex].aiHint} />
                                     </CardHeader>
                                     <CardContent className="p-4 flex-grow space-y-2">
-                                        <CardTitle>{room.type}</CardTitle>
+                                        <CardTitle>{rooms[currentRoomIndex].type}</CardTitle>
                                         <div className="flex items-center gap-1 text-muted-foreground">
                                             <Users className="w-4 h-4"/> 
-                                            <span>{room.capacity} Guests</span>
+                                            <span>{rooms[currentRoomIndex].capacity} Guests</span>
                                         </div>
                                     </CardContent>
                                     <CardFooter className="p-4 pt-0 flex items-center justify-between">
-                                        <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
-                                        <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
-                                            {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
+                                        <p className="text-xl font-bold">${rooms[currentRoomIndex].price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                        <Button onClick={() => handleBookRoom(rooms[currentRoomIndex])} disabled={!rooms[currentRoomIndex].isAvailable} variant={bookedRoom?.id === rooms[currentRoomIndex].id ? "secondary" : "default"}>
+                                            {bookedRoom?.id === rooms[currentRoomIndex].id ? 'Selected' : (rooms[currentRoomIndex].isAvailable ? 'Book Now' : 'Unavailable')}
                                         </Button>
                                     </CardFooter>
                                 </Card>
-                            ))}
-                        </div>
-                      </>
-                    )}
-                </TabsContent>
-                <TabsContent value="food" className="mt-6">
-                   {menu.length === 0 ? (
-                      <p className="text-muted-foreground">The menu is currently unavailable.</p>
-                   ) : (
-                    <div className="space-y-8">
-                       {(['breakfast', 'lunch', 'dinner'] as const).map(category => {
-                          const items = groupedMenu[category];
-                          if (!items || items.length === 0) return null;
-
-                          return (
-                            <div key={category}>
-                              <h3 className="text-2xl font-bold tracking-tight mb-4 capitalize">{category}</h3>
-                              <div className="space-y-4">
-                                {items.map(item => (
-                                    <Card key={item.id} className="w-full p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4">
-                                        <div className="flex items-start sm:items-center gap-4 w-full sm:w-auto flex-1">
-                                            {item.imageUrl && (
-                                                <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover shrink-0" />
-                                            )}
-                                            <div className='flex-1'>
-                                                <h4 className="font-semibold">{item.name}</h4>
-                                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                {rooms.length > 1 && (
+                                    <>
+                                        <Button size="icon" variant="ghost" className="absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handlePrevRoom}>
+                                            <ChevronLeft className="h-6 w-6" />
+                                        </Button>
+                                        <Button size="icon" variant="ghost" className="absolute right-0 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white" onClick={handleNextRoom}>
+                                            <ChevronRight className="h-6 w-6" />
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
+                            
+                            <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+                                {rooms.map((room) => (
+                                    <Card key={room.id} className="w-full flex flex-col overflow-hidden">
+                                        <CardHeader className="p-0">
+                                            <HotelCardImage imageUrls={room.imageUrls} alt={room.type} aiHint={room.aiHint} />
+                                        </CardHeader>
+                                        <CardContent className="p-4 flex-grow space-y-2">
+                                            <CardTitle>{room.type}</CardTitle>
+                                            <div className="flex items-center gap-1 text-muted-foreground">
+                                                <Users className="w-4 h-4"/> 
+                                                <span>{room.capacity} Guests</span>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center justify-between w-full sm:w-auto shrink-0 mt-4 sm:mt-0 gap-4">
-                                            <p className="font-bold text-primary text-lg">${item.price.toFixed(2)}</p>
-                                            <div className="flex items-center gap-2">
-                                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
-                                                  <Minus className="w-4 h-4"/>
-                                                </Button>
-                                                <span>{foodOrder[item.id]?.quantity || 0}</span>
-                                                <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
-                                                  <Plus className="w-4 h-4"/>
-                                                </Button>
-                                            </div>
-                                        </div>
+                                        </CardContent>
+                                        <CardFooter className="p-4 pt-0 flex items-center justify-between">
+                                            <p className="text-xl font-bold">${room.price}<span className="text-sm font-normal text-muted-foreground">/night</span></p>
+                                            <Button onClick={() => handleBookRoom(room)} disabled={!room.isAvailable} variant={bookedRoom?.id === room.id ? "secondary" : "default"}>
+                                                {bookedRoom?.id === room.id ? 'Selected' : (room.isAvailable ? 'Book Now' : 'Unavailable')}
+                                            </Button>
+                                        </CardFooter>
                                     </Card>
                                 ))}
-                              </div>
                             </div>
-                          )
-                       })}
-                    </div>
-                   )}
-                </TabsContent>
-            </Tabs>
-        </div>
+                        </>
+                        )}
+                    </TabsContent>
+                    <TabsContent value="food" className="mt-6">
+                    {menu.length === 0 ? (
+                        <p className="text-muted-foreground">The menu is currently unavailable.</p>
+                    ) : (
+                        <div className="space-y-8">
+                        {(['breakfast', 'lunch', 'dinner'] as const).map(category => {
+                            const items = groupedMenu[category];
+                            if (!items || items.length === 0) return null;
 
-        <div className="lg:col-span-1">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Your Booking</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                   {(!bookedRoom && Object.keys(foodOrder).length === 0) ? (
-                     <p className="text-muted-foreground text-sm text-center">Your cart is empty.</p>
-                   ) : (
-                     <div className="space-y-3">
-                        {bookedRoom && (
-                          <div>
-                            <h4 className="font-semibold">Room</h4>
-                            <div className="flex justify-between items-center text-sm">
-                              <span>{bookedRoom.type} (1 night)</span>
-                              <span>${bookedRoom.price.toFixed(2)}</span>
+                            return (
+                                <div key={category}>
+                                <h3 className="text-2xl font-bold tracking-tight mb-4 capitalize">{category}</h3>
+                                <div className="space-y-4">
+                                    {items.map(item => (
+                                        <Card key={item.id} className="w-full p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4">
+                                            <div className="flex items-start sm:items-center gap-4 w-full sm:w-auto flex-1">
+                                                {item.imageUrl && (
+                                                    <Image src={item.imageUrl} data-ai-hint={item.aiHint || 'food plate'} alt={item.name} width={64} height={64} className="rounded-md object-cover shrink-0" />
+                                                )}
+                                                <div className='flex-1'>
+                                                    <h4 className="font-semibold">{item.name}</h4>
+                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between w-full sm:w-auto shrink-0 mt-4 sm:mt-0 gap-4">
+                                                <p className="font-bold text-primary text-lg">${item.price.toFixed(2)}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, -1)} disabled={!foodOrder[item.id]}>
+                                                    <Minus className="w-4 h-4"/>
+                                                    </Button>
+                                                    <span>{foodOrder[item.id]?.quantity || 0}</span>
+                                                    <Button size="icon" variant="outline" onClick={() => handleFoodQuantityChange(item, 1)}>
+                                                    <Plus className="w-4 h-4"/>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                                </div>
+                            )
+                        })}
+                        </div>
+                    )}
+                    </TabsContent>
+                    <TabsContent value="reviews" className="mt-6">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <CardTitle>Guest Reviews</CardTitle>
+                                        <CardDescription>See what others have to say.</CardDescription>
+                                    </div>
+                                    {user && (
+                                        <Button onClick={() => setIsReviewDialogOpen(true)}>
+                                            <MessageSquare className="mr-2 h-4 w-4" />
+                                            {userReview ? 'Edit Your Review' : 'Leave a Review'}
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {reviews.length === 0 ? (
+                                    <p className="text-muted-foreground text-center py-8">Be the first to review this hotel!</p>
+                                ) : (
+                                    reviews.map(review => (
+                                        <div key={review.id} className="flex gap-4">
+                                            <Avatar>
+                                                <AvatarFallback>{review.customerName.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="font-semibold">{review.customerName}</p>
+                                                    <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })}</p>
+                                                </div>
+                                                <StarRating rating={review.rating} readOnly size={16} className="my-1"/>
+                                                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{review.comment}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+            </div>
+
+            <div className="lg:col-span-1">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Your Booking</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                    {(!bookedRoom && Object.keys(foodOrder).length === 0) ? (
+                        <p className="text-muted-foreground text-sm text-center">Your cart is empty.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {bookedRoom && (
+                            <div>
+                                <h4 className="font-semibold">Room</h4>
+                                <div className="flex justify-between items-center text-sm">
+                                <span>{bookedRoom.type} (1 night)</span>
+                                <span>${bookedRoom.price.toFixed(2)}</span>
+                                </div>
                             </div>
-                          </div>
-                        )}
-                        {Object.keys(foodOrder).length > 0 && (
-                          <div>
-                            <h4 className="font-semibold">Food Order</h4>
-                            {Object.values(foodOrder).map(({ item, quantity }) => (
-                              <div key={item.id} className="flex justify-between items-center text-sm">
-                                <span>{item.name} x{quantity}</span>
-                                <span>${(item.price * quantity).toFixed(2)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <Separator />
-                         <div className="flex justify-between items-center font-bold text-lg">
-                           <span>Total</span>
-                           <span>${total.toFixed(2)}</span>
-                         </div>
-                     </div>
-                   )}
-                </CardContent>
-                <CardFooter>
-                    <Button className="w-full" disabled={total === 0 || isPending} onClick={handleCheckout}>
-                        {isPending ? 'Processing...' : 'Checkout'}
-                    </Button>
-                </CardFooter>
-            </Card>
+                            )}
+                            {Object.keys(foodOrder).length > 0 && (
+                            <div>
+                                <h4 className="font-semibold">Food Order</h4>
+                                {Object.values(foodOrder).map(({ item, quantity }) => (
+                                <div key={item.id} className="flex justify-between items-center text-sm">
+                                    <span>{item.name} x{quantity}</span>
+                                    <span>${(item.price * quantity).toFixed(2)}</span>
+                                </div>
+                                ))}
+                            </div>
+                            )}
+                            <Separator />
+                            <div className="flex justify-between items-center font-bold text-lg">
+                            <span>Total</span>
+                            <span>${total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    )}
+                    </CardContent>
+                    <CardFooter>
+                        <Button className="w-full" disabled={total === 0 || isPending} onClick={handleCheckout}>
+                            {isPending ? 'Processing...' : 'Checkout'}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
         </div>
-      </div>
-    </div>
+        </div>
+        <ReviewFormDialog
+            isOpen={isReviewDialogOpen}
+            setIsOpen={setIsReviewDialogOpen}
+            hotelId={hotelId}
+            existingReview={userReview}
+            onSave={handleReviewSaved}
+        />
+    </>
   );
 }
